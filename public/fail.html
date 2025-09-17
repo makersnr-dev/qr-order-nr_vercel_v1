@@ -1,0 +1,5 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>주문 실패</title><link rel="stylesheet" href="/public/styles.css"/>
+<body class="dark"><div class="center"><div class="result fail"><h2>주문 처리에 실패했습니다.</h2><p id="reason" class="muted"></p><a id="back" class="btn">다시 시도하기</a></div></div>
+<script>const p=new URLSearchParams(location.search);const msg=p.get('message')||p.get('reason')||'네트워크 상태를 확인한 뒤 다시 시도해주세요.';document.getElementById('reason').textContent=msg;const t=p.get('table')||'';document.getElementById('back').href='/?table='+encodeURIComponent(t||'');</script>
+</body></html>

@@ -1,0 +1,10 @@
+{
+  "name": "qrorder-order-dark-toss-v2",
+  "version": "16.4.0",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,9 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>QR Order - 주문</title><link rel="stylesheet" href="/public/styles.css"/></head>
+<body class="dark"><div class="wrap"><h1 class="title">QR Order - 주문</h1>
+<section class="card"><div class="row"><label>테이블</label><input id="tableInput" class="noborder" readonly placeholder="예: 12"/></div>
+<div class="row"><label>오늘의 결제 코드</label><input id="codeInput" placeholder="관리자에게 받은 6자리" maxlength="6" inputmode="numeric"/></div></section>
+<section class="card"><h2>메뉴</h2><div id="menuList" class="menu-list"></div></section>
+<section class="card total"><div class="sum">합계: <strong id="sumPrice">0원</strong></div><button id="btnPay" class="btn primary" disabled>결제하기</button></section>
+</div><script type="module" src="/public/app.js"></script></body></html>

@@ -1,0 +1,31 @@
+
+/* Dark theme */
+:root{
+  --bg:#0b0f14; --surface:#0e141b; --border:#1a2330; --text:#e6edf3; --muted:#93a4b5;
+  --btn:#1a2432; --btn-border:#223044; --primary:#5b8cff; --radius:18px;
+}
+body.dark{ background:var(--bg); color:var(--text); font-family: ui-sans-serif, -apple-system,'Apple SD Gothic Neo','Malgun Gothic',Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+.wrap{ max-width: 920px; margin: 40px auto; padding: 0 16px; }
+.title{ font-size: 34px; margin: 0 0 20px; letter-spacing:.2px }
+.card{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; box-shadow: 0 14px 40px rgba(0,0,0,0.35); }
+.card h2{ margin:6px 2px 14px; font-size: 20px; }
+.row{ display:flex; gap:12px; align-items:center; margin-bottom: 10px; }
+.row label{ width: 160px; color: var(--muted); }
+.row input{ flex:1; padding: 12px 14px; background:#0b1117; color:var(--text); border:1px solid var(--border); border-radius: 12px; outline:none; }
+.row input.noborder{ border-color: transparent; background: transparent; padding-left:0; }
+.menu-list{ display:grid; grid-template-columns: 1fr; gap: 12px; }
+.item{ display:grid; grid-template-columns: 1fr 120px 150px; gap: 8px; align-items:center; padding: 12px; border-radius: 14px; border:1px solid var(--border); background: #0c1219; }
+.item-name{ font-size:16px; }
+.item-price{ text-align:right; color:var(--muted) }
+.item-ctrl{ display:flex; gap:8px; justify-content:flex-end; align-items:center; }
+.qty{ min-width: 28px; text-align:center }
+.btn{ background: var(--btn); color: var(--text); border:1px solid var(--btn-border); border-radius:12px; padding: 10px 14px; cursor:pointer; font-weight:500; }
+.btn:disabled{ opacity:.5; cursor:not-allowed }
+.btn.primary{ background: var(--primary); color:#fff; border-color: transparent; }
+.total{ display:flex; align-items:center; justify-content:space-between; gap:10px }
+.sum{ font-size:18px }
+.center{ min-height: 100dvh; display:grid; place-items:center; padding: 24px; }
+.result{ background:#0e141b; border:1px solid var(--border); border-radius:16px; padding:24px; text-align:center; box-shadow: 0 18px 60px rgba(0,0,0,.45); }
+.result.ok h2{ color:#22c55e }
+.result.fail h2{ color:#ef4444 }
+.muted{ color: var(--muted) }
