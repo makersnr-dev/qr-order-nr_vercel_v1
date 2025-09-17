@@ -1,0 +1,62 @@
+
+:root {
+  --bg:#0b0f14; --surface:#0f141a; --border:#1b2430; --text:#e7edf5; --muted:#9aa7b2;
+  --btn:#273244; --btn-border:#2f3c51; --primary:#4f7cff; --primary-2:#3ab982;
+  --radius:18px;
+}
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+.wrap{ max-width: 920px; margin: 40px auto; padding: 0 16px; }
+.title{ font-size: 36px; margin: 0 0 20px; letter-spacing: 0.3px; }
+
+.card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+.card h2{ margin:6px 2px 14px; font-size: 20px; }
+
+.row{ display:flex; gap:12px; align-items:center; margin-bottom: 10px; }
+.row label{ width: 160px; color: var(--muted); }
+.row input{
+  flex:1; padding: 12px 14px; background:#0b1218; color:var(--text);
+  border:1px solid #1c2835; border-radius: 12px; outline:none;
+}
+.row input[readonly]{ opacity: 0.75; cursor: not-allowed; }
+
+.menu-list{ display:grid; grid-template-columns: 1fr; gap: 12px; }
+.item{
+  display:grid; grid-template-columns: 1fr 120px 150px; gap: 8px; align-items:center;
+  padding: 12px; border-radius: 14px; border:1px solid #1b2430; background:#0c1117;
+}
+.item-name{ font-size:16px; }
+.item-price{ text-align:right; color:var(--muted) }
+.item-ctrl{ display:flex; gap:8px; justify-content:flex-end; align-items:center; }
+.qty{ min-width: 28px; text-align:center }
+
+.btn{
+  background: var(--btn); color: var(--text);
+  border:1px solid var(--btn-border); border-radius:12px; padding: 10px 14px;
+  cursor:pointer; font-weight:500;
+}
+.btn:disabled{ opacity:.5; cursor:not-allowed }
+.btn.primary{ background: var(--primary); border-color: transparent; }
+.btn.ghost{ background:transparent }
+
+.total{ display:flex; align-items:center; justify-content:space-between; gap:10px }
+.sum{ font-size:18px }
+.modal{ position:fixed; inset:0; background: rgba(0,0,0,.45); display:grid; place-items:center }
+.modal.hidden{ display:none }
+.modal-box{
+  background:#0e131a; border:1px solid #1b2430; border-radius:16px; padding:16px; min-width:280px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.35);
+}
+.modal-box h3{ margin: 0 0 8px }
+.modal-box p{ margin: 0 0 10px; color: var(--muted) }
