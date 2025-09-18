@@ -1,0 +1,17 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin Login</title><link rel="stylesheet" href="/public/styles.css"/></head>
+<body><div class="center"><div class="card" style="min-width:320px">
+<h2>관리자 로그인</h2>
+<div class="row"><input id="pw" type="password" placeholder="관리자 비밀번호"/></div>
+<div class="row"><button id="go" class="btn primary" style="width:100%">로그인</button></div>
+<div id="msg" class="muted"></div>
+</div></div>
+<script>
+document.getElementById('go').onclick=async()=>{
+  const pw=document.getElementById('pw').value||'';
+  const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+  const m=document.getElementById('msg');
+  if(!r.ok){m.textContent='비밀번호가 올바르지 않습니다.';return;}
+  const j=await r.json(); localStorage.setItem('adm_tok', j.token); location.href='/dashboard.html';
+};
+</script></body></html>
