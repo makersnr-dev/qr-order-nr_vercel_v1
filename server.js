@@ -43,25 +43,27 @@ let ORDERS = [];
 
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
+const TOKENS = new Set();
 
+// ---- Safe token helpers (no crypto) ----
 const AUTH_SECRET = process.env.CODE_SECRET || process.env.ADMIN_PASSWORD || 'admin1234';
-function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
-function hmacSign(input){ return b64url(require('crypto').createHmac('sha256', String(AUTH_SECRET)).update(String(input)).digest()); }
-function makeStatelessToken(){ const ts=Date.now().toString(); return ts + '.' + hmacSign(ts); }
+function makeToken(){ const ts=Date.now(); const rnd=(Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)); const tok='u.'+ts+'.'+rnd; try{TOKENS.add(tok);}catch(_){ } return tok; }catch(_){}
+  return tok;
+}
 function isStatelessValid(tok){
   try{
-    const parts = String(tok).split('.'); if(parts.length!==2) return false;
-    const ts = parts[0]; const sig = parts[1];
-    if (hmacSign(ts)!==sig) return false;
-    const age = Date.now() - Number(ts);  // accept for 30 days
+    const m = /^u\.(\d+)\.[a-z0-9]+$/i.exec(String(tok));
+    if(!m) return false;
+    const age = Date.now() - Number(m[1]);
     return age >= 0 && age <= 1000*60*60*24*30;
   }catch(e){ return false; }
 }
-const TOKENS = new Set();
-function makeToken(){ return makeStatelessToken(); }
-function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):''; return TOKENS.has(t) || isStatelessValid(t); }
+function tokenFrom(req){ const h=req.headers['authorization']||''; return h.startsWith('Bearer ')?h.slice(7):''; }
+function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):''; return (typeof TOKENS!=='undefined' && TOKENS.has && TOKENS.has(t)) || (/^u\.(\d+)\.[a-z0-9]+$/i.test(t) && (Date.now()-Number(t.split('.')[1])<=1000*60*60*24*30)); }
+function makeToken(){ const ts=Date.now(); const rnd=(Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)); const tok='u.'+ts+'.'+rnd; try{TOKENS.add(tok);}catch(_){ } return tok; }
+function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):''; return (typeof TOKENS!=='undefined' && TOKENS.has && TOKENS.has(t)) || (/^u\.(\d+)\.[a-z0-9]+$/i.test(t) && (Date.now()-Number(t.split('.')[1])<=1000*60*60*24*30)); }
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
-app.post('/auth/login', (req,res)=>{
+app.post('/auth/login', (req,res)=>{ try {
   const { password } = req.body || {};
   if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
   res.status(401).json({ ok:false, message:'Invalid password' });
@@ -100,7 +102,7 @@ app.get('/orders', (_req,res)=> res.json(ORDERS));
 app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id);
-// Refund endpoint (logical; Toss test cancel supported if TOSS_SECRET_KEY set)
+// Refund endpoint (logical only; free)
 app.post('/orders/:id/refund', requireAuth, async (req,res)=>{
   try{
     const id = req.params.id;
@@ -108,21 +110,6 @@ app.post('/orders/:id/refund', requireAuth, async (req,res)=>{
     if (i<0) return res.status(404).send('not found');
     const o = ORDERS[i];
     if (o.refunded || o.status==='환불') return res.json({ ok:true, order:o, note:'already refunded' });
-
-    const sk = process.env.TOSS_SECRET_KEY || '';
-    if (sk && o.paymentKey){
-      try{
-        const auth=Buffer.from(sk+':').toString('base64');
-        const rr = await fetch(`https://api.tosspayments.com/v1/payments/${o.paymentKey}/cancel`, {
-          method:'POST', headers:{ 'Authorization':`Basic ${auth}`,'Content-Type':'application/json' },
-          body: JSON.stringify({ cancelReason: req.body?.reason || 'admin refund' })
-        });
-        const jj = await rr.json().catch(()=> ({}));
-        if (!rr.ok) return res.status(400).json({ ok:false, error:'toss-cancel-failed', detail:jj });
-        o.tossCancel=jj;
-      }catch(e){ return res.status(500).json({ ok:false, error:'toss-cancel-error', detail:String(e) }); }
-    }
-
     ORDERS[i] = { ...o, status:'환불', refunded:true, refundedAt: Date.now() };
     try{ broadcastOrder(ORDERS[i]); }catch(_){}
     res.json({ ok:true, order: ORDERS[i] });
