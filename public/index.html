@@ -92,7 +92,15 @@
     try{
       const tossPayments=TossPayments(clientKey);
       await tossPayments.requestPayment('카드',{ amount, orderId, orderName, successUrl, failUrl });
-    }catch(e){ alert('결제가 취소되었거나 창이 닫혔습니다.'); }
+    }catch(e){
+      const code = e && (e.code || e.name);
+      const ignorable = ['USER_CANCEL', 'PAY_PROCESS_CANCELED', 'POPUP_CLOSED'];
+      if (ignorable.includes(code)) { /* 조용히 무시(취소) */ return; }
+      console.error('[TossPayments error]', e);
+      // 안내 모달 대신 실패 페이지로 이동 (alert 방지)
+      const reason = encodeURIComponent(code || 'UNKNOWN');
+      window.location.href = `/payment/fail?reason=${reason}`;
+    }
   }
   (function initTable(){ try{ const u=new URL(location.href); const t=u.searchParams.get('table'); if(t) document.getElementById('tableNo').value=t; }catch(_){} })();
   document.getElementById('payBtn').onclick=requestPay;

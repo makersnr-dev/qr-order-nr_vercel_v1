@@ -85,7 +85,48 @@ function broadcastOrder(o){ const data=JSON.stringify({ type:'order', id:o.id, t
 app.get('/orders', (_req,res)=> res.json(ORDERS));
 app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
-app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
+app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id);
+// Refund endpoint (supports Toss test cancel if TOSS_SECRET_KEY set)
+app.post('/orders/:id/refund', requireAuth, async (req,res)=>{
+  try{
+    const id = req.params.id;
+    const i = ORDERS.findIndex(o => String(o.id)===String(id));
+    if (i<0) return res.status(404).send('not found');
+    const o = ORDERS[i];
+
+    // If already refunded
+    if (o.refunded || o.status==='환불') {
+      return res.json({ ok:true, order:o, note:'already refunded' });
+    }
+
+    // Optional: Toss cancel in test mode (real API call only if key present and paymentKey exists)
+    const sk = process.env.TOSS_SECRET_KEY || '';
+    if (sk && o.paymentKey) {
+      try {
+        const auth = Buffer.from(sk+':').toString('base64');
+        const resp = await fetch(`https://api.tosspayments.com/v1/payments/${o.paymentKey}/cancel`, {
+          method:'POST',
+          headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cancelReason: req.body?.reason || 'admin refund' })
+        });
+        const j = await resp.json().catch(()=> ({}));
+        if (!resp.ok) {
+          return res.status(400).json({ ok:false, error:'toss-cancel-failed', detail:j });
+        }
+        o.tossCancel = j;
+      } catch(e){
+        return res.status(500).json({ ok:false, error:'toss-cancel-error', detail:String(e) });
+      }
+    }
+
+    ORDERS[i] = { ...o, status:'환불', refunded:true, refundedAt: Date.now() };
+    try { broadcastOrder(ORDERS[i]); } catch(_){}
+    res.json({ ok:true, order: ORDERS[i] });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+ if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
 
 // Excel export/import
 app.get('/export/orders.xlsx', requireAuth, async (_req,res)=>{ try{ const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('orders'); ws.columns=[{header:'createdAt',key:'createdAt',width:22},{header:'orderId',key:'orderId',width:24},{header:'tableNo',key:'tableNo',width:10},{header:'items',key:'items',width:40},{header:'amount',key:'amount',width:12},{header:'status',key:'status',width:10},{header:'paymentKey',key:'paymentKey',width:32},]; const toTxt=(items)=>(items||[]).map(([id,q])=>`${id} x ${q}`).join(', '); ([...ORDERS]).forEach(o=> ws.addRow({ ...o, items: toTxt(o.items) })); res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition','attachment; filename="orders.xlsx"'); await wb.xlsx.write(res); res.end(); }catch(e){ console.error(e); res.status(500).send('엑셀 생성 실패'); } });
@@ -102,85 +143,9 @@ app.get('/healthz', (_req,res)=> res.send('ok'));
 app.get('/payment/success', (_req,res)=> res.sendFile(path.join(__dirname,'public','success.html')));
 app.get('/payment/fail', (_req,res)=> res.sendFile(path.join(__dirname,'public','fail.html')));
 app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-if(process.env.VERCEL!=='1') app.listen(PORT, ()=> console.log('API on :'+PORT));
+if (process.env.VERCEL !== '1') app.listen(PORT, ()=> console.log('API on :'+PORT));
 
 app.post('/confirm', async (req,res)=>{ res.json({ ok:true }); });
-
-
-// ==== Added endpoints for Admin features (status, refund, sold-out, stats) ====
-
-// Update order status
-app.patch('/orders/:id/status', requireAuth, (req,res)=>{
-  try{
-    const id = req.params.id;
-    const st = String((req.body||{}).status||'').trim();
-    const i = ORDERS.findIndex(o=>o.id===id);
-    if(i<0) return res.status(404).send('not found');
-    ORDERS[i] = { ...ORDERS[i], status: st, updatedAt: new Date().toISOString() };
-    try{ broadcastOrder(ORDERS[i]); }catch(_){}
-    res.json({ ok:true });
-  }catch(e){ res.status(500).send('status error'); }
-});
-
-// Logical refund (no gateway call)
-app.post('/orders/:id/refund', requireAuth, (req,res)=>{
-  try{
-    const id=req.params.id;
-    const i=ORDERS.findIndex(o=>o.id===id);
-    if(i<0) return res.status(404).send('not found');
-    ORDERS[i] = { ...ORDERS[i], status: '환불', refunded: true, refundedAt: new Date().toISOString() };
-    try{ broadcastOrder(ORDERS[i]); }catch(_){}
-    res.json({ ok:true });
-  }catch(e){ res.status(500).send('refund error'); }
-});
-
-// Toggle sold-out via active flag
-app.patch('/menu/:id/soldout', requireAuth, (req,res)=>{
-  try{
-    const id=req.params.id;
-    const soldOut = !!((req.body||{}).soldOut);
-    const i = MENU.findIndex(m=>m.id===id);
-    if(i<0) return res.status(404).send('not found');
-    MENU[i] = { ...MENU[i], active: !soldOut };
-    // broadcast menu change via order stream
-    try{
-      const data = JSON.stringify({ type:'menu', menu: MENU[i] });
-      for(const c of clients){ try{ c.res.write(`event: order\n`); c.res.write(`data: ${data}\n\n`);}catch(_){} }
-    }catch(_){}
-    res.json({ ok:true, item: MENU[i] });
-  }catch(e){ res.status(500).send('soldout error'); }
-});
-
-// Sales stats simple endpoint
-app.get('/stats/sales', requireAuth, (req,res)=>{
-  try{
-    const period = String(req.query.period||'month');
-    const now = new Date();
-    const start = (()=>{
-      const d = new Date();
-      if(period==='day'){ d.setHours(0,0,0,0); }
-      else if(period==='week'){ const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); }
-      else if(period==='year'){ d.setMonth(0,1); d.setHours(0,0,0,0); }
-      else { d.setDate(1); d.setHours(0,0,0,0); }
-      return d;
-    })();
-    let total=0;
-    const byItem={};
-    for(const o of ORDERS){
-      const t=new Date(o.createdAt||Date.now());
-      if(t<start) continue;
-      if(o.status==='취소') continue;
-      total += Number(o.amount||0);
-      for(const [id,q] of (o.items||[])){
-        const name=(MENU.find(m=>m.id===id)?.name)||id;
-        byItem[name] = byItem[name]||{ qty:0, sales:0 };
-        byItem[name].qty += q;
-        byItem[name].sales += (MENU.find(m=>m.id===id)?.price||0)*q;
-      }
-    }
-    res.json({ period, from:start.toISOString(), total, items: byItem });
-  }catch(e){ res.status(500).send('stats error'); }
-});
 
 
 export default app;
