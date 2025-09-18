@@ -102,9 +102,85 @@ app.get('/healthz', (_req,res)=> res.send('ok'));
 app.get('/payment/success', (_req,res)=> res.sendFile(path.join(__dirname,'public','success.html')));
 app.get('/payment/fail', (_req,res)=> res.sendFile(path.join(__dirname,'public','fail.html')));
 app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-if (process.env.VERCEL !== '1') app.listen(PORT, ()=> console.log('API on :'+PORT));
+if(process.env.VERCEL!=='1') app.listen(PORT, ()=> console.log('API on :'+PORT));
 
 app.post('/confirm', async (req,res)=>{ res.json({ ok:true }); });
+
+
+// ==== Added endpoints for Admin features (status, refund, sold-out, stats) ====
+
+// Update order status
+app.patch('/orders/:id/status', requireAuth, (req,res)=>{
+  try{
+    const id = req.params.id;
+    const st = String((req.body||{}).status||'').trim();
+    const i = ORDERS.findIndex(o=>o.id===id);
+    if(i<0) return res.status(404).send('not found');
+    ORDERS[i] = { ...ORDERS[i], status: st, updatedAt: new Date().toISOString() };
+    try{ broadcastOrder(ORDERS[i]); }catch(_){}
+    res.json({ ok:true });
+  }catch(e){ res.status(500).send('status error'); }
+});
+
+// Logical refund (no gateway call)
+app.post('/orders/:id/refund', requireAuth, (req,res)=>{
+  try{
+    const id=req.params.id;
+    const i=ORDERS.findIndex(o=>o.id===id);
+    if(i<0) return res.status(404).send('not found');
+    ORDERS[i] = { ...ORDERS[i], status: '환불', refunded: true, refundedAt: new Date().toISOString() };
+    try{ broadcastOrder(ORDERS[i]); }catch(_){}
+    res.json({ ok:true });
+  }catch(e){ res.status(500).send('refund error'); }
+});
+
+// Toggle sold-out via active flag
+app.patch('/menu/:id/soldout', requireAuth, (req,res)=>{
+  try{
+    const id=req.params.id;
+    const soldOut = !!((req.body||{}).soldOut);
+    const i = MENU.findIndex(m=>m.id===id);
+    if(i<0) return res.status(404).send('not found');
+    MENU[i] = { ...MENU[i], active: !soldOut };
+    // broadcast menu change via order stream
+    try{
+      const data = JSON.stringify({ type:'menu', menu: MENU[i] });
+      for(const c of clients){ try{ c.res.write(`event: order\n`); c.res.write(`data: ${data}\n\n`);}catch(_){} }
+    }catch(_){}
+    res.json({ ok:true, item: MENU[i] });
+  }catch(e){ res.status(500).send('soldout error'); }
+});
+
+// Sales stats simple endpoint
+app.get('/stats/sales', requireAuth, (req,res)=>{
+  try{
+    const period = String(req.query.period||'month');
+    const now = new Date();
+    const start = (()=>{
+      const d = new Date();
+      if(period==='day'){ d.setHours(0,0,0,0); }
+      else if(period==='week'){ const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); }
+      else if(period==='year'){ d.setMonth(0,1); d.setHours(0,0,0,0); }
+      else { d.setDate(1); d.setHours(0,0,0,0); }
+      return d;
+    })();
+    let total=0;
+    const byItem={};
+    for(const o of ORDERS){
+      const t=new Date(o.createdAt||Date.now());
+      if(t<start) continue;
+      if(o.status==='취소') continue;
+      total += Number(o.amount||0);
+      for(const [id,q] of (o.items||[])){
+        const name=(MENU.find(m=>m.id===id)?.name)||id;
+        byItem[name] = byItem[name]||{ qty:0, sales:0 };
+        byItem[name].qty += q;
+        byItem[name].sales += (MENU.find(m=>m.id===id)?.price||0)*q;
+      }
+    }
+    res.json({ period, from:start.toISOString(), total, items: byItem });
+  }catch(e){ res.status(500).send('stats error'); }
+});
 
 
 export default app;
