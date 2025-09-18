@@ -1,9 +1,0 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>주문 완료</title><link rel="stylesheet" href="/public/styles.css"/>
-<body class="dark"><div class="center"><div class="result ok"><h2>주문이 완료되었습니다.</h2><p>잠시만 기다려주세요!</p><a id="back" class="btn primary">주문 페이지로 돌아가기</a></div></div>
-<script>(async()=>{const p=new URLSearchParams(location.search);const t=p.get('table')||'';const paymentKey=p.get('paymentKey');const orderId=p.get('orderId');const amount=Number(p.get('amount')||0);
-if(paymentKey&&orderId&&amount){const r=await fetch('/api/toss/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey,orderId,amount})});
-if(!r.ok){const tx=await r.text();return location.replace('/fail.html?table='+encodeURIComponent(t)+'&reason='+encodeURIComponent('승인 실패: '+tx));}
-const saved=sessionStorage.getItem('qr_checkout_'+t);let items=[],amt=amount;if(saved){const s=JSON.parse(saved);items=(s.items||[]).map(it=>[it.id,it.qty]);}
-await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tableNo:t,items,amount:amt,paymentKey,orderId})});sessionStorage.removeItem('qr_checkout_'+t);}document.getElementById('back').href='/?table='+encodeURIComponent(t||'');})();</script>
-</body></html>
