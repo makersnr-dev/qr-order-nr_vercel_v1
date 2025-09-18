@@ -1,1 +1,9 @@
-{"cleanUrls": true, "rewrites": [{"source": "/(.*)", "destination": "/api"}]}
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
