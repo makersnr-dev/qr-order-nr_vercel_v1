@@ -41,7 +41,7 @@
     if(saved){ const { tableNo, items } = JSON.parse(saved);
       const r = await fetch('/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ tableNo, items, amount, paymentKey, orderId }) });
       if(!r.ok){ console.warn('주문 생성 실패'); }
-      sessionStorage.removeItem('qrOrderPending'); try{ localStorage.removeItem('qrCart'); }catch(_){ }
+      sessionStorage.removeItem('qrOrderPending');
     }
     progress.textContent=''; showModal(); setTimeout(closeAndGoHome, 3000);
   }catch(e){ progress.textContent = '처리 중 오류: '+(e?.message||e); }
