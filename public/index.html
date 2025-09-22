@@ -2,7 +2,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>QR Order - 주문</title>
 <script src="https://js.tosspayments.com/v1"></script>
-<style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}</style>
+<style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
+/* --- Responsive square grid for menu buttons --- */
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #223;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer;padding:8px}
+.menu-card:hover{filter:brightness(1.06)}
+.menu-title{font-weight:600;line-height:1.2;word-break:keep-all;overflow-wrap:anywhere}
+.menu-price{margin-top:6px;opacity:.9;font-size:.9em}
+</style>
 </head><body><div class="wrap">
 <h1>QR Order - 주문</h1>
 <div class="card">
@@ -108,17 +115,18 @@
   }
 
 
+
 function renderMenu(){
   const box = document.getElementById('menu');
+  box.classList.add('menu-grid');
   box.innerHTML = menuData.map(m=>`
-    <div class="row" style="margin:6px 0">
-      <button class="btn" style="width:100%; justify-content:space-between" onclick="addItem('${m.id}')">
-        <span>${m.name}</span>
-        <span>${fmt(m.price)}원</span>
-      </button>
-    </div>
+    <button class="menu-card" onclick="addItem('${m.id}')">
+      <div class="menu-title">${m.name}</div>
+      <div class="menu-price">${fmt(m.price)}원</div>
+    </button>
   `).join('');
 }
+
   function addItem(id){ cart.set(id,(cart.get(id)||0)+1); saveCart(); renderMenu(); renderCart(); updateSum(); }
   function subItem(id){ const v=(cart.get(id)||0)-1; if(v<=0) cart.delete(id); else cart.set(id,v); saveCart(); renderMenu(); renderCart(); updateSum(); }
   async function loadMenu(){ const r=await fetch('/menu'); menuData=await r.json(); renderMenu(); updateSum(); }
