@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const SSE_CLIENTS = new Set();
-function sseSendAll(payload){ const data = `data: ${JSON.stringify(payload)}\n\n`; for(const res of SSE_CLIENTS){ try{ res.write(data);}catch(_){/* ignore */} } }
+function sseSendAll(payload){ const data = `data: ${JSON.stringify(payload)}\n\n`; for(const res of SSE_CLIENTS){ try{ res.write(data);}catch(_){ } } }
 const PORT = process.env.PORT || 3001;
 
 // CORS (whitelist)
@@ -68,6 +68,7 @@ app.get('/daily-code', requireAuth, async (_req,res)=>{ try{ res.json(await getT
 app.post('/daily-code/regen', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); const rand=String(Math.floor(1000+Math.random()*9000)); CODE_OVERRIDE[t]=rand; res.json({ date:t, code:rand, override:true }); }catch(e){ console.error(e); res.status(500).send('regen error'); } });
 app.post('/daily-code/clear', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); delete CODE_OVERRIDE[t]; res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('clear error'); } });
 
+// Customer verify
 
 // Staff call from customer
 app.post('/call-staff', async (req,res)=>{
@@ -81,7 +82,6 @@ app.post('/call-staff', async (req,res)=>{
     return res.json({ok:true});
   }catch(e){ console.error('call-staff error', e); return res.status(500).json({ok:false}); }
 });
-// Customer verify
 app.post('/verify-code', async (req,res)=>{
   try{ const provided=String((req.body||{}).code||'').trim(); const j=await getTodayCode(); if(provided && provided===j.code) return res.json({ ok:true }); res.status(401).json({ ok:false, message:'코드 불일치' }); }
   catch(e){ console.error(e); res.status(500).json({ ok:false, message:'server error' }); }
@@ -95,8 +95,7 @@ app.delete('/menu/:id', requireAuth, (req,res)=>{ const i=MENU.findIndex(m=>m.id
 
 // Orders + SSE
 const clients = new Set();
-app.get('/events/orders', (req,res)=>{
-  res.setHeader('Content-Type','text/event-stream');
+app.get('/events/orders', (req,res)=>{ res.setHeader('Content-Type','text/event-stream');
   SSE_CLIENTS.add(res);
   req.on('close',()=>{ try{ SSE_CLIENTS.delete(res); res.end(); }catch(_){}}); res.setHeader('Cache-Control','no-cache'); res.setHeader('Connection','keep-alive'); res.flushHeaders?.(); const client={res}; clients.add(client); req.on('close', ()=> clients.delete(client)); });
 function broadcastOrder(o){ const data=JSON.stringify({ type:'order', id:o.id, tableNo:o.tableNo, amount:o.amount, createdAt:o.createdAt }); for(const c of clients){ try{ c.res.write(`event: order\n`); c.res.write(`data: ${data}\n\n`); }catch(_){} } }
