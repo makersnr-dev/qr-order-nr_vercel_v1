@@ -10,6 +10,14 @@
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^2.0.0"
+  },
+  "overrides": {
+    "glob": "^10.3.12",
+    "rimraf": "^5.0.7",
+    "fstream": "npm:tar@^6.2.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
