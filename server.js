@@ -53,7 +53,6 @@ let MENU = [
   { id:'B1', name:'크로와상', price:3500, cat:'베이커리', active:true },
 ];
 let ORDERS = [];
-let CALLS = [];
 
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
@@ -90,21 +89,10 @@ app.post('/call-staff', async (req,res)=>{
     const reason = (j.reason||'').toString().slice(0,100);
     if(!tableNo){ return res.status(400).json({ok:false, error:'TABLE_REQUIRED'}); }
     const payload = { type:'staff_call', at: Date.now(), tableNo, reason };
-    try{ CALLS.push({ id: String(Date.now())+Math.random().toString(36).slice(2,8), tableNo, reason, createdAt: payload.at }); if(CALLS.length>1000) CALLS = CALLS.slice(-500); }catch(_){ }
     sseSendAll(payload);
     return res.json({ok:true});
   }catch(e){ console.error('call-staff error', e); return res.status(500).json({ok:false}); }
 });
-
-// Calls list (persisted in-memory)
-app.get('/calls', requireAuth, (req,res)=>{
-  try{
-    const limit = Math.min( Number(req.query.limit||'500'), 2000 );
-    const arr = (CALLS||[]).slice().sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
-    return res.json(arr.slice(0, limit));
-  }catch(e){ console.error('get /calls error', e); return res.status(500).json({ ok:false }); }
-});
-
 app.post('/verify-code', async (req,res)=>{
   try{ const provided=String((req.body||{}).code||'').trim(); const j=await getTodayCode(); if(provided && provided===j.code) return res.json({ ok:true }); res.status(401).json({ ok:false, message:'코드 불일치' }); }
   catch(e){ console.error(e); res.status(500).json({ ok:false, message:'server error' }); }
