@@ -5,24 +5,21 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 dotenv.config();
 
-// === JWT-based auth (stateless) ===
+// JWT auth
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-function requireAuth(req, res, next){
+function requireAuth(req,res,next){
   const auth = req.headers.authorization || '';
-  const [scheme, token] = auth.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  const parts = auth.split(' ');
+  if(parts.length !== 2 || parts[0] !== 'Bearer'){
     return res.status(401).json({ ok:false, message:'Missing token' });
   }
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    return next();
-  } catch (e) {
-    return res.status(401).json({ ok:false, message:'Unauthorized' });
-  }
+  try{
+    const payload = jwt.verify(parts[1], JWT_SECRET);
+    req.user = payload; return next();
+  }catch(e){ return res.status(401).json({ ok:false, message:'Unauthorized' }); }
 }
 
 
@@ -33,19 +30,20 @@ const SSE_CLIENTS = new Set();
 function sseSendAll(payload){ const data = `data: ${JSON.stringify(payload)}\n\n`; for(const res of SSE_CLIENTS){ try{ res.write(data);}catch(_){ } } }
 const PORT = process.env.PORT || 3001;
 
-
-// CORS (robust)
+// CORS (whitelist)
+const ALLOWED = (process.env.ALLOWED_ORIGINS||'*').split(',').map(s=>s.trim()).filter(Boolean);
 app.use((req,res,next)=>{
   const origin = req.headers.origin;
-  if(origin){ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary','Origin'); }
+  if(!origin || ALLOWED.includes('*') || ALLOWED.includes(origin)){
+    res.setHeader('Access-Control-Allow-Origin', origin||'*'); res.setHeader('Vary','Origin');
+  }
   res.setHeader('Access-Control-Allow-Credentials','true');
   res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,DELETE,OPTIONS');
-  if(req.method==='OPTIONS'){ return res.sendStatus(204); }
-  next();
+  if(req.method==='OPTIONS'){ return res.sendStatus(204); } next();
 });
-app.use(express.json());
 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname,'public')));
 
@@ -64,15 +62,14 @@ let ORDERS = [];
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
 ); }
-app.post('/auth/login', (req,res)=>{
+app.post('/auth/login',(req,res)=>{
   const { password } = req.body || {};
   if(String(password)===String(ADMIN_PASSWORD)){
-    const token = jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn:'7d' });
     return res.json({ ok:true, token });
   }
   return res.status(401).json({ ok:false, message:'Invalid password' });
-});
-}
+}); }
   res.status(401).json({ ok:false, message:'Invalid password' });
 });
 

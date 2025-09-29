@@ -1,0 +1,1 @@
+JWT v2b patch: single requireAuth, minimal diffs.
