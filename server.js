@@ -10,23 +10,20 @@ dotenv.config();
 
 // === JWT-based auth (stateless) ===
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-
 function requireAuth(req, res, next){
-  const auth = req.headers['authorization'] || '';
-  const parts = auth.split(' ');
-  if(parts.length !== 2 || parts[0] !== 'Bearer'){
+  const auth = req.headers.authorization || '';
+  const [scheme, token] = auth.split(' ');
+  if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({ ok:false, message:'Missing token' });
   }
-  const token = parts[1];
-  try{
+  try {
     const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload;
     return next();
-  }catch(e){
+  } catch (e) {
     return res.status(401).json({ ok:false, message:'Unauthorized' });
   }
 }
-
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,10 +64,16 @@ let ORDERS = [];
 
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
-function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
+); }
 app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
-  if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
+  if(String(password)===String(ADMIN_PASSWORD)){
+    const token = jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ ok:true, token });
+  }
+  return res.status(401).json({ ok:false, message:'Invalid password' });
+});
+}
   res.status(401).json({ ok:false, message:'Invalid password' });
 });
 
