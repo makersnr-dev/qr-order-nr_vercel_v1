@@ -5,7 +5,9 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
+import jwt from 'jsonwebtoken';
 dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +30,15 @@ app.use((req,res,next)=>{
 });
 
 app.use(express.json());
+
+// JWT seeding middleware (stateless -> state)
+app.use((req,res,next)=>{
+  try{
+    const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):'';
+    if(t){ try{ jwt.verify(t, JWT_SECRET); try{ TOKENS.add(t); }catch(_){} }catch(_){} }
+  }catch(_){}
+  next();
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname,'public')));
 
@@ -51,7 +62,7 @@ function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.star
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
 app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
-  if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
+  if(String(password)===String(ADMIN_PASSWORD)){ const token=jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn:'7d' }); TOKENS.add(token); return res.json({ ok:true, token }); }
   res.status(401).json({ ok:false, message:'Invalid password' });
 });
 
