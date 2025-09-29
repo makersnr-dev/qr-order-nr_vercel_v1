@@ -5,7 +5,29 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
+import jwt from 'jsonwebtoken';
 dotenv.config();
+
+// === JWT-based auth (stateless) ===
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+function requireAuth(req, res, next){
+  const auth = req.headers['authorization'] || '';
+  const parts = auth.split(' ');
+  if(parts.length !== 2 || parts[0] !== 'Bearer'){
+    return res.status(401).json({ ok:false, message:'Missing token' });
+  }
+  const token = parts[1];
+  try{
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    return next();
+  }catch(e){
+    return res.status(401).json({ ok:false, message:'Unauthorized' });
+  }
+}
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,9 +67,6 @@ let ORDERS = [];
 
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
-const TOKENS = new Set();
-function makeToken(){ return crypto.randomBytes(24).toString('hex'); }
-function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):''; return TOKENS.has(t); }
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
 app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
