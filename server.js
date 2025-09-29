@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 dotenv.config();
 
 // === JWT-based auth (stateless) ===
@@ -33,20 +33,19 @@ const SSE_CLIENTS = new Set();
 function sseSendAll(payload){ const data = `data: ${JSON.stringify(payload)}\n\n`; for(const res of SSE_CLIENTS){ try{ res.write(data);}catch(_){ } } }
 const PORT = process.env.PORT || 3001;
 
-// CORS (whitelist)
-const ALLOWED = (process.env.ALLOWED_ORIGINS||'*').split(',').map(s=>s.trim()).filter(Boolean);
+
+// CORS (robust)
 app.use((req,res,next)=>{
   const origin = req.headers.origin;
-  if(!origin || ALLOWED.includes('*') || ALLOWED.includes(origin)){
-    res.setHeader('Access-Control-Allow-Origin', origin||'*'); res.setHeader('Vary','Origin');
-  }
+  if(origin){ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary','Origin'); }
   res.setHeader('Access-Control-Allow-Credentials','true');
   res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,DELETE,OPTIONS');
-  if(req.method==='OPTIONS'){ return res.sendStatus(204); } next();
+  if(req.method==='OPTIONS'){ return res.sendStatus(204); }
+  next();
 });
-
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname,'public')));
 
