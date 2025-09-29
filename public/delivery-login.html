@@ -15,26 +15,4 @@ input{flex:1;padding:10px;border-radius:8px;border:1px solid #335;background:#0b
 <a href="#" onclick="alert('비밀번호찾기: 운영자에게 문의하세요');return false;">비밀번호 찾기</a>
 <a href="#" onclick="alert('회원가입은 매장에 문의해주세요');return false;">회원가입</a>
 </div></div>
-<div class="card hist"><h3>이전 주문</h3><div id="history"></div><div class="small">이 브라우저에서 주문했던 최근 내역을 보여줍니다.</div></div>
-<script>
-function fmt(n){return (n||0).toLocaleString('ko-KR');}
-function renderHistory(){
-  const box=document.getElementById('history');
-  const arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
-  if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
-  box.innerHTML = arr.slice(-20).reverse().map(o=>{
-    const when = new Date(o.time||Date.now()); const m=String(when.getMonth()+1).padStart(2,'0'); const d=String(when.getDate()).padStart(2,'0');
-    const hh=String(when.getHours()).padStart(2,'0'); const mi=String(when.getMinutes()).padStart(2,'0');
-    const items=(o.items||[]).map(p=>p[0]+'×'+p[1]).join(', ');
-    return `<div style="padding:6px 0;border-bottom:1px solid #223">${m}/${d} ${hh}:${mi} · ${items} · 합계 ${fmt(o.amount)}원</div>`;
-  }).join('');
-}
-document.getElementById('loginBtn').onclick=function(){
-  const id=document.getElementById('loginId').value.trim();
-  const pw=document.getElementById('loginPw').value.trim();
-  if(!id||!pw){ alert('아이디/비밀번호를 입력해주세요'); return; }
-  sessionStorage.setItem('qrLoginUser', JSON.stringify({ id, ts:Date.now() }));
-  location.href='/delivery/home';
-};
-renderHistory();
-</script></div></body></html>
+</body></html>
