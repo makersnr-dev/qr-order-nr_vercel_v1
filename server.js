@@ -5,9 +5,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import jwt from 'jsonwebtoken';
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,15 +28,6 @@ app.use((req,res,next)=>{
 });
 
 app.use(express.json());
-
-// JWT seeding middleware (stateless -> state)
-app.use((req,res,next)=>{
-  try{
-    const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):'';
-    if(t){ try{ jwt.verify(t, JWT_SECRET); try{ TOKENS.add(t); }catch(_){} }catch(_){} }
-  }catch(_){}
-  next();
-});
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname,'public')));
 
@@ -62,7 +51,7 @@ function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.star
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
 app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
-  if(String(password)===String(ADMIN_PASSWORD)){ const token=jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn:'7d' }); TOKENS.add(token); return res.json({ ok:true, token }); }
+  if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
   res.status(401).json({ ok:false, message:'Invalid password' });
 });
 
@@ -116,7 +105,70 @@ app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
 
 // Excel export/import
-app.get('/export/orders.xlsx', requireAuth, async (_req,res)=>{ try{ const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('orders'); ws.columns=[{header:'createdAt',key:'createdAt',width:22},{header:'orderId',key:'orderId',width:24},{header:'tableNo',key:'tableNo',width:10},{header:'items',key:'items',width:40},{header:'amount',key:'amount',width:12},{header:'status',key:'status',width:10},{header:'paymentKey',key:'paymentKey',width:32},]; const toTxt=(items)=>(items||[]).map(([id,q])=>`${id} x ${q}`).join(', '); ([...ORDERS]).forEach(o=> ws.addRow({ ...o, items: toTxt(o.items) })); res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition','attachment; filename="orders.xlsx"'); await wb.xlsx.write(res); res.end(); }catch(e){ console.error(e); res.status(500).send('엑셀 생성 실패'); } });
+app.get('
+
+// Orders summary (aggregate)
+app.get('/orders/summary', requireAuth, (req,res)=>{
+  try{
+    const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl);
+    const from = url.searchParams.get('from'); // YYYY-MM-DD
+    const to = url.searchParams.get('to');     // YYYY-MM-DD
+    const group = (url.searchParams.get('group') || 'item'); // 'item' | 'day'
+    const parseDate = (ts)=> new Date(typeof ts==='number'? ts : Date.parse(ts));
+    const toYMD = (d)=>{
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    };
+    const inRange = (o)=>{
+      const d = parseDate(o.createdAt || o.created || Date.now());
+      if (from && to){ return toYMD(d) >= from && toYMD(d) <= to; }
+      if (from){ return toYMD(d) >= from; }
+      if (to){ return toYMD(d) <= to; }
+      return true;
+    };
+    const menuById = new Map(MENU.map(x=>[x.id, x]));
+    const filtered = (ORDERS||[]).filter(inRange);
+    if (group === 'day'){
+      // group by date
+      const byDay = {};
+      for (const o of filtered){
+        const d = toYMD(parseDate(o.createdAt || o.created || Date.now()));
+        let total = 0;
+        for (const [id,q] of (o.items||[])){
+          const m = menuById.get(id); const price = m? m.price : 0;
+          total += (q||0) * price;
+        }
+        if (!byDay[d]) byDay[d] = { date:d, orders:0, revenue:0 };
+        byDay[d].orders += 1;
+        byDay[d].revenue += total;
+      }
+      const rows = Object.values(byDay).sort((a,b)=> a.date<b.date? -1:1);
+      return res.json({ ok:true, group:'day', rows });
+    }else{
+      // group by item
+      const agg = {};
+      for (const o of filtered){
+        for (const [id,q] of (o.items||[])){
+          if (!agg[id]){
+            const m = menuById.get(id) || { name:id, price:0 };
+            agg[id] = { id, name: m.name || id, price: m.price||0, qty:0, revenue:0 };
+          }
+          agg[id].qty += (q||0);
+          agg[id].revenue = agg[id].qty * agg[id].price;
+        }
+      }
+      const rows = Object.values(agg).sort((a,b)=> b.qty - a.qty);
+      return res.json({ ok:true, group:'item', rows });
+    }
+  }catch(e){
+    console.error(e);
+    return res.status(500).json({ ok:false, message:'summary_error' });
+  }
+});
+
+/export/orders.xlsx', requireAuth, async (_req,res)=>{ try{ const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('orders'); ws.columns=[{header:'createdAt',key:'createdAt',width:22},{header:'orderId',key:'orderId',width:24},{header:'tableNo',key:'tableNo',width:10},{header:'items',key:'items',width:40},{header:'amount',key:'amount',width:12},{header:'status',key:'status',width:10},{header:'paymentKey',key:'paymentKey',width:32},]; const toTxt=(items)=>(items||[]).map(([id,q])=>`${id} x ${q}`).join(', '); ([...ORDERS]).forEach(o=> ws.addRow({ ...o, items: toTxt(o.items) })); res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition','attachment; filename="orders.xlsx"'); await wb.xlsx.write(res); res.end(); }catch(e){ console.error(e); res.status(500).send('엑셀 생성 실패'); } });
 const upload = multer({ storage: multer.memoryStorage(), limits:{ fileSize: 5*1024*1024 } });
 app.post('/import/menu', requireAuth, upload.single('file'), async (req,res)=>{ try{ if(!req.file) return res.status(400).send('파일이 필요합니다.'); const wb=new ExcelJS.Workbook(); await wb.xlsx.load(req.file.buffer); const ws=wb.worksheets[0]; if(!ws) return res.status(400).send('시트를 찾을 수 없습니다.'); const headers={}; ws.getRow(1).eachCell((cell,col)=> headers[String(cell.value).toLowerCase()]=col); const need=['id','name','price']; for(const h of need){ if(!headers[h]) return res.status(400).send('헤더 누락: '+h); } const next=[]; ws.eachRow((row,i)=>{ if(i===1) return; const id=String(row.getCell(headers['id']).value||'').trim(); if(!id) return; const name=String(row.getCell(headers['name']).value||'').trim(); const price=Number(row.getCell(headers['price']).value||0); const cat=headers['cat']?String(row.getCell(headers['cat']).value||'').trim():''; const active=headers['active']?!!row.getCell(headers['active']).value:true; if(!name||!price) return; next.push({ id,name,price,cat,active }); }); if(next.length===0) return res.status(400).send('유효한 행이 없습니다.'); MENU=next; res.json({ ok:true, count: next.length }); }catch(e){ console.error(e); res.status(500).send('업로드 실패'); } });
 
