@@ -5,9 +5,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import jwt from 'jsonwebtoken';
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,27 +47,13 @@ let ORDERS = [];
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
 const TOKENS = new Set();
 function makeToken(){ return crypto.randomBytes(24).toString('hex'); }
-function isAuthed(req){
-const h = req.headers['authorization'] || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : '';
-  if (!t) return false;
-  try {
-    jwt.verify(t, JWT_SECRET);
-    return true;
-  } catch (e) {
-    try { return (typeof TOKENS !== 'undefined') && TOKENS.has ? TOKENS.has(t) : false; } catch(_) { return false; }
-  }
-}
+function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):''; return TOKENS.has(t); }
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
-app.post('/auth/login',(req,res)=>{
+app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
-  if(String(password)===String(ADMIN_PASSWORD)){
-    const token = jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn:'7d' });
-    try { if (typeof TOKENS !== 'undefined') TOKENS.add(token); } catch(_) {}
-    return res.json({ ok:true, token });
-  }
-  return res.status(401).json({ ok:false, message:'Invalid password' });
-}););
+  if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
+  res.status(401).json({ ok:false, message:'Invalid password' });
+});
 
 // ===== Daily code (deterministic + override) =====
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
