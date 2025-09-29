@@ -50,6 +50,8 @@
 
 </div>
 
+<div class="card"><h3>이전 주문</h3><div id="history"></div></div>
+
 <div class="card">
   <div class="row">
     <div>합계: <b id="sum">0</b>원</div>
@@ -203,5 +205,25 @@ function renderMenu(){
   setPayEnabled(false); loadClientKey(); loadMenu();
   renderCart(); updateCartBadge();
   document.getElementById('callStaffBtn').onclick = callStaff;
+  try{(function(){const box=document.getElementById('history'); if(!box) return; const arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]'); if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; } box.innerHTML=arr.slice(-20).reverse().map(o=>{const d=new Date(o.time||Date.now()); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); const items=(o.items||[]).map(p=>p[0]+'×'+p[1]).join(', '); return `<div style="padding:6px 0;border-bottom:1px solid #223">${m}/${dd} ${hh}:${mi} · ${items} · 합계 ${(o.amount||0).toLocaleString('ko-KR')}원</div>`; }).join(''); })();}catch(_){}
+</script>
+<script>
+function renderLocalHistory(){
+  try{
+    var box = document.getElementById('history');
+    if(!box) return;
+    var arr = JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
+    if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
+    box.innerHTML = arr.slice(-20).reverse().map(function(o){
+      var d=new Date(o.time||Date.now());
+      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
+      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
+      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
+      var amt=(o.amount||0).toLocaleString('ko-KR');
+      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+' · 합계 '+amt+'원</div>';
+    }).join('');
+  }catch(e){}
+}
+try{ renderLocalHistory(); }catch(_){}
 </script>
 </div></body></html>

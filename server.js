@@ -5,9 +5,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import jwt from 'jsonwebtoken';
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,15 +28,6 @@ app.use((req,res,next)=>{
 });
 
 app.use(express.json());
-
-// JWT seeding middleware (stateless -> state)
-app.use((req,res,next)=>{
-  try{
-    const h=req.headers['authorization']||''; const t=h.startsWith('Bearer ')?h.slice(7):'';
-    if(t){ try{ jwt.verify(t, JWT_SECRET); try{ TOKENS.add(t); }catch(_){} }catch(_){} }
-  }catch(_){}
-  next();
-});
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname,'public')));
 
@@ -62,7 +51,7 @@ function isAuthed(req){ const h=req.headers['authorization']||''; const t=h.star
 function requireAuth(req,res,next){ if(isAuthed(req)) return next(); return res.status(401).json({ ok:false, message:'Unauthorized' }); }
 app.post('/auth/login', (req,res)=>{
   const { password } = req.body || {};
-  if(String(password)===String(ADMIN_PASSWORD)){ const token=jwt.sign({ role:'admin' }, JWT_SECRET, { expiresIn:'7d' }); TOKENS.add(token); return res.json({ ok:true, token }); }
+  if(String(password)===String(ADMIN_PASSWORD)){ const token=makeToken(); TOKENS.add(token); return res.json({ ok:true, token }); }
   res.status(401).json({ ok:false, message:'Invalid password' });
 });
 
@@ -129,7 +118,10 @@ app.get('/qr', async (req,res)=>{
 app.get('/healthz', (_req,res)=> res.send('ok'));
 app.get('/payment/success', (_req,res)=> res.sendFile(path.join(__dirname,'public','success.html')));
 app.get('/payment/fail', (_req,res)=> res.sendFile(path.join(__dirname,'public','fail.html')));
-app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
+app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','start.html')));
+app.get('/store', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
+app.get('/delivery', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-login.html')));
+app.get('/delivery/home', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-home.html')));
 if (process.env.VERCEL !== '1') app.listen(PORT, ()=> console.log('API on :'+PORT));
 
 app.post('/confirm', async (req,res)=>{ res.json({ ok:true }); });
