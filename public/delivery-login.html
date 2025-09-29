@@ -15,4 +15,12 @@ input{flex:1;padding:10px;border-radius:8px;border:1px solid #335;background:#0b
 <a href="#" onclick="alert('비밀번호찾기: 운영자에게 문의하세요');return false;">비밀번호 찾기</a>
 <a href="#" onclick="alert('회원가입은 매장에 문의해주세요');return false;">회원가입</a>
 </div></div>
-</body></html>
+<script>
+document.getElementById('loginBtn').onclick=function(){
+  const id=document.getElementById('loginId').value.trim();
+  const pw=document.getElementById('loginPw').value.trim();
+  if(!id||!pw){ alert('아이디/비밀번호를 입력해주세요'); return; }
+  sessionStorage.setItem('qrLoginUser', JSON.stringify({ id, ts:Date.now() }));
+  location.href = '/delivery/home';
+};
+</script></body></html>
