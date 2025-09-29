@@ -12,7 +12,21 @@
 </style>
 </head><body><div class="wrap">
 <h1>QR Order - 주문</h1>
-<div class="card">
+
+<div class="card" style="margin-bottom:10px">
+  <div id="tabs" style="display:flex;gap:8px">
+    <button class="tabBtn" data-tab="order">주문</button>
+    <button class="tabBtn" data-tab="history">이전 주문</button>
+  </div>
+</div>
+<style>
+.tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
+.tabBtn.active{background:#14324a}
+.tabPane{display:none}
+.tabPane.active{display:block}
+</style>
+
+<div id="orderPane" class="tabPane active card">
   <div class="row">
     <label>테이블</label>
     <input id="tableNo" placeholder="예: 12" style="width:120px"/>
@@ -223,4 +237,42 @@ function renderLocalHistory(){
 }
 try{ renderLocalHistory(); }catch(_){}
 </script>
-</div></body></html>
+</div>
+<div id="histPane" class="tabPane">
+  <div class="card"><h3>이전 주문</h3><div id="history"></div>
+    <div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div>
+  </div>
+</div>
+<script>
+function renderHistoryInto(elId){
+  try{
+    var box=document.getElementById(elId);
+    var arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
+    if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
+    box.innerHTML = arr.slice(-50).reverse().map(function(o){
+      var d=new Date(o.time||Date.now());
+      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
+      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
+      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
+      var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
+      var amt = (o.amount||0);
+      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';
+    }).join('');
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var tabs=document.querySelectorAll('.tabBtn');
+  var orderPane=document.getElementById('orderPane');
+  var histPane=document.getElementById('histPane');
+  function activate(which){
+    tabs.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===which); });
+    if(orderPane) orderPane.classList.toggle('active', which==='order');
+    if(histPane){ histPane.classList.toggle('active', which==='history'); if(which==='history') renderHistoryInto('history'); }
+  }
+  tabs.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
+  // default active is 'order'
+  activate('order');
+});
+</script>
+
+</body></html>

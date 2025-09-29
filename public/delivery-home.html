@@ -7,7 +7,21 @@ h1{margin:0 0 12px 0}.btn{padding:12px 14px;border-radius:10px;border:1px solid 
 .small{opacity:.8;font-size:12px}.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;border-radius:10px;border:1px solid #223;background:linear-gradient(180deg,#0f1b2a,#0b1623);cursor:pointer}
 .menu-title{font-weight:600}.menu-price{opacity:.9;font-size:.9em;margin-top:4px}</style></head><body><div class="wrap">
-<h1>배달/예약 주문</h1><div class="grid"><div class="card"><h3>메뉴</h3><div id="menu" class="menu-grid"></div></div>
+<h1>배달/예약 주문</h1>
+
+<div class="card" style="margin-bottom:10px">
+  <div id="tabs" style="display:flex;gap:8px">
+    <button class="tabBtn" data-tab="order">주문</button>
+    <button class="tabBtn" data-tab="history">이전 주문</button>
+  </div>
+</div>
+<style>
+.tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
+.tabBtn.active{background:#14324a}
+.tabPane{display:none}
+.tabPane.active{display:block}
+</style>
+<div id="orderPane" class="tabPane active grid"><div class="card"><h3>메뉴</h3><div id="menu" class="menu-grid"></div></div>
 <div class="card"><h3>정보</h3>
 <div class="row"><input id="addr" placeholder="배송지 주소"/></div>
 <div class="row"><input id="name" placeholder="주문자 이름"/></div>
@@ -61,4 +75,43 @@ function renderHistory(){
   }).join('');
 }
 loadMenu(); renderHistory();
-</script></div></body></html>
+</script>
+
+<div id="histPane" class="tabPane">
+  <div class="card"><h3>이전 주문</h3><div id="history"></div>
+    <div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div>
+  </div>
+</div>
+<script>
+function renderHistoryInto(elId){
+  try{
+    var box=document.getElementById(elId);
+    var arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
+    if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
+    box.innerHTML = arr.slice(-50).reverse().map(function(o){
+      var d=new Date(o.time||Date.now());
+      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
+      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
+      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
+      var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
+      var amt = (o.amount||0);
+      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';
+    }).join('');
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var tabs=document.querySelectorAll('.tabBtn');
+  var orderPane=document.getElementById('orderPane');
+  var histPane=document.getElementById('histPane');
+  function activate(which){
+    tabs.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===which); });
+    if(orderPane) orderPane.classList.toggle('active', which==='order');
+    if(histPane){ histPane.classList.toggle('active', which==='history'); if(which==='history') renderHistoryInto('history'); }
+  }
+  tabs.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
+  // default active is 'order'
+  activate('order');
+});
+</script>
+
+</div></body></html>
