@@ -11,7 +11,7 @@
 .menu-price{margin-top:6px;opacity:.9;font-size:.9em}
 </style>
 </head><body><div class="wrap">
-<h1>QR Order - 주문</h1>
+<h1>배달/예약</h1>
 
 <div class="card" style="margin-bottom:10px">
   <div id="tabs" style="display:flex;gap:8px">
@@ -19,40 +19,23 @@
     <button class="tabBtn" data-tab="history">이전 주문</button>
   </div>
 </div>
-<div id="orderPane" class="tabPane active"><style>
+<div id="orderPane" class="tabPane active">
+<div class="card">
+  <h3>배송/예약 정보</h3>
+  <div class="row"><input id="addr" placeholder="배송지 주소"/></div>
+  <div class="row"><input id="name" placeholder="주문자 이름"/></div>
+  <div class="row"><input id="phone" placeholder="연락처 (숫자만)"/></div>
+  <div class="row"><label style="width:90px">예약일자</label><input type="date" id="date"/><input type="time" id="time"/></div>
+  <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
+</div>
+<style>
 .tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
 .tabBtn.active{background:#14324a}
 .tabPane{display:none}
 .tabPane.active{display:block}
 </style>
 
-<div class="card">
-  <div class="row">
-    <label>테이블</label>
-    <input id="tableNo" placeholder="예: 12" style="width:120px"/>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <label>오늘의 결제 코드</label>
-    <input id="codeInput" placeholder="관리자에게 받은 4자리"/>
-  </div>
-</div>
 
-
-<div class="card">
-  <h3>직원 호출</h3>
-  <div class="row">
-    <label>호출 사유</label>
-    <select id="callReason">
-      <option value="">선택 없음</option>
-      <option>물/음료 리필</option>
-      <option>수저/냅킨 요청</option>
-      <option>결제 요청</option>
-      <option>기타 요청</option>
-    </select>
-    <button class="btn" id="callStaffBtn">직원 호출</button>
-  </div>
-  <div class="small" id="callMsg" style="margin-top:6px"></div>
-</div>
 
 <div class="card">
   <h3>메뉴</h3>
