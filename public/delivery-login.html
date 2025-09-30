@@ -4,16 +4,15 @@
 h1{margin:0 0 12px 0}.row{display:flex;gap:8px;align-items:center;margin:8px 0}
 input{flex:1;padding:10px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3}
 .btn{padding:12px 14px;border-radius:10px;border:1px solid #335;background:#14324a;color:#e6edf3;cursor:pointer}.btn.full{display:block;width:100%;font-size:16px}
-.linkrow{display:flex;gap:8px;justify-content:space-between;margin-top:8px}a{color:#9bd;text-decoration:none}a:hover{text-decoration:underline}
-.small{opacity:.8;font-size:12px}</style></head><body><div class="wrap">
-<h1>배달/예약 로그인</h1><div class="card">
+.linkrow{display:flex;gap:8px;justify-content:space-between;margin-top:8px}a{color:#9bd;text-decoration:none}a:hover{text-decoration:underline}</style></head>
+<body><div class="wrap"><h1>배달/예약 로그인</h1><div class="card">
 <div class="row"><input id="loginId" placeholder="아이디"/></div>
 <div class="row"><input id="loginPw" type="password" placeholder="비밀번호"/></div>
 <button class="btn full" id="loginBtn">로그인</button>
 <div class="linkrow"><a href="#" onclick="alert('아이디찾기: 운영자에게 문의');return false;">아이디 찾기</a>
 <a href="#" onclick="alert('비밀번호찾기: 운영자에게 문의');return false;">비밀번호 찾기</a>
 <a href="#" onclick="alert('회원가입은 매장에 문의해주세요');return false;">회원가입</a></div>
-</div>
+</div></div>
 <script>
 document.getElementById('loginBtn').onclick=function(){
   const id=document.getElementById('loginId').value.trim();
@@ -22,4 +21,4 @@ document.getElementById('loginBtn').onclick=function(){
   sessionStorage.setItem('qrLoginUser', JSON.stringify({ id, ts:Date.now() }));
   location.href='/delivery/home';
 };
-</script></div></body></html>
+</script></body></html>

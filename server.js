@@ -118,13 +118,14 @@ app.get('/qr', async (req,res)=>{
 app.get('/healthz', (_req,res)=> res.send('ok'));
 app.get('/payment/success', (_req,res)=> res.sendFile(path.join(__dirname,'public','success.html')));
 app.get('/payment/fail', (_req,res)=> res.sendFile(path.join(__dirname,'public','fail.html')));
-app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','start.html')));
-app.get('/store', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-app.get('/delivery', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-login.html')));
-app.get('/delivery/home', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-home.html')));
+app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
 if (process.env.VERCEL !== '1') app.listen(PORT, ()=> console.log('API on :'+PORT));
 
 app.post('/confirm', async (req,res)=>{ res.json({ ok:true }); });
 
 
 export default app;
+
+app.get('/store', (_req,res)=> res.sendFile(path.join(__dirname,'public','store.html')));
+app.get('/delivery', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-login.html')));
+app.get('/delivery/home', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-home.html')));

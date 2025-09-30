@@ -47,13 +47,4 @@
   }catch(e){ progress.textContent = '처리 중 오류: '+(e?.message||e); }
 })();
 </script>
-<script>
-try{
-  const pending = JSON.parse(sessionStorage.getItem('qrOrderPending')||'null');
-  if(pending){
-    const arr = JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
-    arr.push({ time: Date.now(), items: pending.items||[], amount: pending.amount||0, orderId: pending.orderId||'' });
-    localStorage.setItem('qrOrderHistory', JSON.stringify(arr.slice(-200)));
-  }
-}catch(_){}
-</script></body></html>
+</body></html>
