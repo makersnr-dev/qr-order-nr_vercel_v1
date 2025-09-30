@@ -12,12 +12,12 @@
 </style>
 </head><body><div class="wrap">
 <h1>QR Order - 주문</h1>
-
 <div class="card" style="margin-bottom:10px">
   <div id="tabs" style="display:flex;gap:8px">
-    <button class="tabBtn" data-tab="order">주문</button>
+    <button class="tabBtn active" data-tab="order">주문</button>
     <button class="tabBtn" data-tab="history">이전 주문</button>
   </div>
+<div id="historyPane" class="tabPane"><div class="card"><h3>이전 주문</h3><div id="history"></div><div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div></div></div>
 </div>
 <style>
 .tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
@@ -26,7 +26,7 @@
 .tabPane.active{display:block}
 </style>
 
-<div id="orderPane" class="tabPane active card">
+<div id="totalCard" class="card">
   <div class="row">
     <label>테이블</label>
     <input id="tableNo" placeholder="예: 12" style="width:120px"/>
@@ -38,8 +38,8 @@
 </div>
 
 
-<div class="card">
-  <h3>직원 호출</h3>
+<div id="staffCard" class="card"><h3>직원 호출</h3>
+
   <div class="row">
     <label>호출 사유</label>
     <select id="callReason">
@@ -54,17 +54,16 @@
   <div class="small" id="callMsg" style="margin-top:6px"></div>
 </div>
 
-<div class="card">
-  <h3>메뉴</h3>
+<div id="menuCard" class="card"><h3>메뉴</h3>
   <div id="menu"></div>
-<div class="card">
+<div id="totalCard" class="card">
   <h3>장바구니 <span id="cartCountBadge" class="small"></span></h3>
   <div id="cartList"></div>
 </div>
 
 </div>
 
-<div class="card">
+<div id="totalCard" class="card">
   <div class="row">
     <div>합계: <b id="sum">0</b>원</div>
     <button class="btn" id="payBtn">결제하기</button>
@@ -218,29 +217,6 @@ function renderMenu(){
   renderCart(); updateCartBadge();
   document.getElementById('callStaffBtn').onclick = callStaff;
 </script>
-<script>
-function renderLocalHistory(){
-  try{
-    var box = document.getElementById('history');
-    if(!box) return;
-    var arr = JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
-    if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
-    box.innerHTML = arr.slice(-20).reverse().map(function(o){
-      var d=new Date(o.time||Date.now());
-      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
-      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
-      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
-      var amt=(o.amount||0).toLocaleString('ko-KR');
-      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+' · 합계 '+amt+'원</div>';
-    }).join('');
-  }catch(e){}
-}
-try{ renderLocalHistory(); }catch(_){}
-</script>
-</div>
-<div id="histPane" class="tabPane">
-    <div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div>
-  </div>
 </div>
 <script>
 function renderHistoryInto(elId){
@@ -254,7 +230,7 @@ function renderHistoryInto(elId){
       var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
       var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
       var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
-      var amt = (o.amount||0);
+      var amt=o.amount||0;
       return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';
     }).join('');
   }catch(e){}
@@ -262,16 +238,39 @@ function renderHistoryInto(elId){
 document.addEventListener('DOMContentLoaded', function(){
   var tabs=document.querySelectorAll('.tabBtn');
   var orderPane=document.getElementById('orderPane');
-  var histPane=document.getElementById('histPane');
+  var historyPane=document.getElementById('historyPane');
   function activate(which){
     tabs.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===which); });
     if(orderPane) orderPane.classList.toggle('active', which==='order');
-    if(histPane){ histPane.classList.toggle('active', which==='history'); if(which==='history') renderHistoryInto('history'); }
+    if(historyPane){
+      historyPane.classList.toggle('active', which==='history');
+      if(which==='history') renderHistoryInto('history');
+    }
   }
   tabs.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
-  // default active is 'order'
   activate('order');
 });
 </script>
 
 </body></html>
+
+<script>
+function renderHistoryInto(elId){
+  try{
+    var box=document.getElementById(elId);
+    var arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
+    if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
+    box.innerHTML = arr.slice(-50).reverse().map(function(o){
+      var d=new Date(o.time||Date.now());
+      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
+      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
+      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
+      var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
+      var amt=o.amount||0;
+      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';
+    }).join('');
+  }catch(e){}
+}
+</script>
+
+
