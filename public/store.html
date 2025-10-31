@@ -201,7 +201,7 @@ renderMenu(); updateSum(); }
     const orderName='QR 주문';
     const origin=window.location.origin;
     const successUrl = `${origin}/payment/success?from=store`;
-    const failUrl = `${origin}/payment/fail`;
+    const failUrl = `${origin}/payment/fail?from=store`;
     const items=Array.from(cart.entries()).map(([id,qty])=>[id,qty]);
     sessionStorage.setItem('qrOrderPending', JSON.stringify({ tableNo, items, amount, orderId, orderType: 'store' }));
     try{
