@@ -64,7 +64,7 @@ const CODE_OVERRIDE = {}; // { [date] : '1234' }
 function defaultCodeFor(dateStr){ const h=crypto.createHmac('sha256', CODE_SECRET).update(String(dateStr)).digest('hex'); return digitsFromHex(h); }
 async function getTodayCode(){ const t=todayStr(); if(CODE_OVERRIDE[t]) return { date:t, code:CODE_OVERRIDE[t], override:true }; return { date:t, code: defaultCodeFor(t), override:false }; }
 
-app.get('/daily-code',  async (_req,res)=>{ try{ res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('code error'); } });
+app.get('/daily-code', requireAuth, async (_req,res)=>{ try{ res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('code error'); } });
 app.post('/daily-code/regen', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); const rand=String(Math.floor(1000+Math.random()*9000)); CODE_OVERRIDE[t]=rand; res.json({ date:t, code:rand, override:true }); }catch(e){ console.error(e); res.status(500).send('regen error'); } });
 app.post('/daily-code/clear', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); delete CODE_OVERRIDE[t]; res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('clear error'); } });
 
