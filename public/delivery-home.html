@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko"><head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>QR Order - 배달/예약</title>
@@ -16,6 +17,10 @@
 .tabPane{display:none}
 .tabPane.active{display:block}
 .hint{margin-left:8px;opacity:.8;font-size:12px} .inline-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.form-row{display:flex;align-items:center;gap:12px;margin:8px 0;flex-wrap:wrap}
+.form-row label{width:110px;min-width:110px;text-align:left;opacity:.95}
+.form-row input{flex:1}
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
@@ -28,13 +33,13 @@
 <div class="tabPane active" id="orderPane">
 <div class="card">
 <h3>배달/예약 정보 <span class="required">*</span></h3>
-<div class="row"><input aria-label="배달 받을 주소" id="addr" placeholder="배송지 주소 *" required=""/><span class="hint">배달 받을 주소</span></div>
-<div class="row"><input aria-label="주문자 성함" id="name" placeholder="주문자 이름 *" required=""/><span class="hint">주문자 성함</span></div>
-<div class="row"><input aria-label="연락용 번호(숫자만)" id="phone" pattern="\d{8,13}" placeholder="연락처 (숫자만) *" required="" title="숫자만 8~13자리"/><span class="hint">연락용 번호(숫자만)</span></div>
+<div class="row"><div class="form-row"><label for="addr">주소</label><input aria-label="배달 받을 주소" id="addr" placeholder="배송지 주소 *" required=""/></div></div>
+<div class="row"><div class="form-row"><label for="name">주문자</label><input aria-label="주문자 성함" id="name" placeholder="주문자 이름 *" required=""/></div></div>
+<div class="row"><div class="form-row"><label for="phone">연락처</label><input aria-label="연락용 번호(숫자만)" id="phone" inputmode="numeric" pattern="\d{8,13}" placeholder="연락처 (숫자만) *" required="" title="숫자만 8~13자리"/></div></div>
 <div class="row">
-<label style="width:90px">예약일자</label>
-<input aria-label="예약일자 (미입력 시 즉시주문)" id="date" inputmode="numeric" min="2025-10-31" type="date"/><span class="hint">예약일자 (미입력 시 즉시주문)</span>
-<input aria-label="예약시간" id="time" inputmode="numeric" type="time"/><span class="hint">예약시간</span>
+
+<div class="form-row"><label for="date">예약일자</label><input aria-label="예약일자 (미입력 시 즉시주문)" id="date" inputmode="none" min="2025-10-31" onfocus="this.showPicker &amp;&amp; this.showPicker()" type="date"/></div>
+<div class="form-row"><label for="time">예약시간</label><input aria-label="예약시간" id="time" inputmode="numeric" type="time"/></div>
 </div>
 <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
 </div>
