@@ -89,6 +89,14 @@
 <script>
 (function() {
   'use strict';
+  // ===== 안전한 기본 설정 =====
+  const ORDER_BASE = (window.ORDER_BASE || '');
+  function joinUrl(base, path){
+    if(!base) return path;
+    if(base.endsWith('/') && path.startsWith('/')) return base + path.slice(1);
+    if(!base.endsWith('/') && !path.startsWith('/')) return base + '/' + path;
+    return base + path;
+  }
   
   // ===== 전역 변수 =====
   const cart = loadCart();
@@ -105,16 +113,48 @@ function showReserveUI(show){
 }
 async function fetchBankInfo(){
   try{
-    const r = await fetch(joinUrl(ORDER_BASE || '', '/bank-info/public'));
-    if(!r.ok) return;
-    const j = await r.json();
-    __bankInfo = (j && j.data) || null;
+    if(__bankInfo) return __bankInfo;
+    const candidates = [
+      joinUrl(ORDER_BASE || '', '/bank-info/public'),
+      '/bank-info/public',
+      '/bank-info',
+      '/api/bank-info',
+      '/admin/bank-accounts/public'
+    ];
+    for(const url of candidates){
+      try{
+        const r = await fetch(url, { cache: 'no-store' });
+        if(r && r.ok){
+          const j = await r.json();
+          __bankInfo = (j && (j.data || j.bankInfo || j)) || null;
+          if(__bankInfo) return __bankInfo;
+        }
+      }catch(e){ /* try next */ }
+    }
+  }catch(_){ /* ignore */ }
+  return null;
+}
+async function copyBankInfo(){
+  try{
+    if(!__bankInfo){ await fetchBankInfo(); }
+    if(!__bankInfo){
+      const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='계좌 정보를 불러오지 못했습니다.'; setTimeout(()=>m.textContent='', 2500); }
+      return;
+    }
+    const text = [__bankInfo.bank||'', __bankInfo.account||__bankInfo.accountNumber||'', __bankInfo.holder||__bankInfo.owner||''].filter(Boolean).join(' / ');
+    const doMsg = (ok)=>{ const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent = ok ? '복사되었습니다.' : '복사 실패'; setTimeout(()=>m.textContent='', 2000); } };
+    try{
+      await navigator.clipboard.writeText(text);
+      doMsg(true);
+      return;
+    }catch(e){ /* fallback below */ }
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.top='-1000px';
+    document.body.appendChild(ta); ta.select();
+    try{ const ok = document.execCommand('copy'); doMsg(!!ok); } finally { document.body.removeChild(ta);}    
   }catch(_){ /* ignore */ }
 }
-function copyBankInfo(){
-  try{
-    if(!__bankInfo){ return; }
-    const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
+const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
     navigator.clipboard.writeText(text).then(()=>{
       const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }
     });
@@ -151,15 +191,6 @@ function copyBankInfo(){
   // ===== 장바구니 관리 =====
   function loadCart() {
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const raw = localStorage.getItem('qrCart');
       if (!raw) return new Map();
@@ -173,15 +204,6 @@ function copyBankInfo(){
   
   function saveCart() {
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const arr = Array.from(cart.entries()).filter(([_,q]) => Number(q) > 0);
       localStorage.setItem('qrCart', JSON.stringify(arr));
@@ -283,30 +305,12 @@ function copyBankInfo(){
   // ===== API 호출 =====
   async function loadMenu() {
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const r = await fetch('/menu');
       if (!r.ok) throw new Error('Menu fetch failed');
       menuData = await r.json();
       
       try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
  window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
 renderMenu();
       updateSum();
@@ -318,15 +322,6 @@ renderMenu();
   
   async function loadClientKey() {
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const r = await fetch('/config');
       if (!r.ok) throw new Error('Config fetch failed');
@@ -454,15 +449,6 @@ renderMenu();
 
     // 주문 정보 저장
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       sessionStorage.setItem('qrOrderPending', JSON.stringify({
         items,
@@ -490,15 +476,6 @@ renderMenu();
   }
   // 결제 요청 // __reserveBranch
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const tossPayments = TossPayments(clientKey);
       await tossPayments.requestPayment('카드', {
@@ -531,15 +508,6 @@ renderMenu();
     if (!box) return;
     
     try {
-    // reserve toggles bound
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
-    }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
       
@@ -615,6 +583,20 @@ renderMenu();
   // ===== 초기화 =====
   function init() {
     console.log('Initializing delivery page...');
+    // 예약(무결제) 전환 시, 입금계좌 UI 제어 및 계좌정보 선로딩
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    function onModeChange(){
+      const reserve = !!(mRes && mRes.checked);
+      showReserveUI(reserve);
+      if(reserve){ fetchBankInfo(); }
+    }
+    if(mDel){ mDel.addEventListener('change', onModeChange); }
+    if(mRes){ mRes.addEventListener('change', onModeChange); }
+    if(bankBtn){ bankBtn.addEventListener('click', function(){ copyBankInfo(); }); }
+    // 초기 상태 반영
+    onModeChange();
     
     // 결제 버튼 연결
     const payBtn = getElement('payBtn');
