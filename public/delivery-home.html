@@ -1,48 +1,7 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>QR Order - 배달/예약</title>
-<script src="https://js.tosspayments.com/v1">
-// === 배달 주문 제출 ===
-async function submitDeliveryOrder(payload){
-  const res = await fetch('/delivery-orders', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const j = await res.json().catch(()=>({}));
-  if(!res.ok || !j.ok){ throw new Error(j.error||'submit failed'); }
-  return j.order;
-}
-
-document.getElementById('deliverySubmit').onclick = async function(){
-  try{
-    const name = document.getElementById('custName').value.trim();
-    const phone = document.getElementById('custPhone').value.trim();
-    const address = document.getElementById('custAddr').value.trim();
-    const addressDetail = document.getElementById('custAddrDetail').value.trim();
-    const scheduledAt = document.getElementById('custTime').value;
-    const requestMemo = document.getElementById('custMemo').value.trim();
-    if(!name||!phone||!address){ alert('이름/휴대폰/주소는 필수입니다.'); return; }
-
-    let items = [];
-    try{
-      const saved = localStorage.getItem('cart');
-      if(saved){ items = JSON.parse(saved); }
-      if(Array.isArray(window.CART)&&window.CART.length) items = window.CART;
-    }catch(_){}
-    const amount = (items||[]).reduce((s,it)=> s + Number(it.price||0)*(Number(it.qty||1)), 0);
-
-    const order = await submitDeliveryOrder({
-      customer:{ name, phone, address, addressDetail, requestMemo, scheduledAt },
-      items, amount, payment:{ method:'미결제' }
-    });
-    alert('배달 접수 완료! 접수번호: '+order.id);
-  }catch(e){
-    console.error(e);
-    alert('배달 접수 실패: '+e.message);
-  }
-};
-</script>
+<script src="https://js.tosspayments.com/v1"></script>
 <style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select,textarea{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #223;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer;padding:8px}
@@ -55,25 +14,23 @@ document.getElementById('deliverySubmit').onclick = async function(){
 .tabBtn.active{background:#14324a}
 .tabPane{display:none}
 .tabPane.active{display:block}
+
+/* --- Layout for left rail + main --- */
+.layout{display:grid;grid-template-columns:1fr;gap:12px}
+.rail{position:sticky;top:96px;align-self:start}
+.main{}
+@media(min-width:1024px){
+  .layout{grid-template-columns:360px 1fr;gap:16px}
+  .rail{top:96px}
+}
+/* Inputs look */
+.input{padding:10px;border-radius:10px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;width:100%}
+.select{padding:10px;border-radius:10px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;width:100%}
+.label{display:block;margin-bottom:6px;font-weight:600}
+/* Make pay button stick at bottom on mobile? keep as-is */
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
-<div class="row"><button class="btn" id="deliverySubmit">배달 주문 제출</button></div>
-<div class="card" id="deliveryForm">
-  <h3>배달 정보</h3>
-  <div class="row">
-    <input id="custName" placeholder="이름 *"/>
-    <input id="custPhone" placeholder="휴대폰 *"/>
-  </div>
-  <div class="row">
-    <input id="custAddr" placeholder="주소 *" style="width:60%"/>
-    <input id="custAddrDetail" placeholder="상세주소" style="width:38%"/>
-  </div>
-  <div class="row">
-    <input id="custTime" type="datetime-local" placeholder="희망 시간(선택)"/>
-    <input id="custMemo" placeholder="요청사항(선택)" style="flex:1"/>
-  </div>
-</div>
 
 <div class="card" style="margin-bottom:10px">
   <div id="tabs" style="display:flex;gap:8px">
@@ -82,19 +39,18 @@ document.getElementById('deliverySubmit').onclick = async function(){
   </div>
 </div>
 
-<div id="orderPane" class="tabPane active">
-  <div class="card">
+<div id="orderPane" class="tabPane active">\n  <div class="layout">\n    <aside class="rail">\n<div class="card">
     <h3>배송/예약 정보 <span class="required">*</span></h3>
-    <div class="row"><input id="addr" placeholder="배송지 주소 *" required/></div>
-    <div class="row"><input id="name" placeholder="주문자 이름 *" required/></div>
-    <div class="row"><input id="phone" placeholder="연락처 (숫자만) *" required/></div>
+    <div class="row"><label class="label" for="addr">배송지 주소</label><input id="addr" class="input" placeholder="도로명/지번 주소" required/></div>
+    <div class="row"><label class="label" for="name">주문자 이름</label><input id="name" class="input" placeholder="이름" required/></div>
+    <div class="row"><label class="label" for="phone">연락처 (숫자만)</label><input id="phone" class="input" inputmode="numeric" pattern="[0-9]*" placeholder="010-0000-0000" required/></div>
     <div class="row">
       <label style="width:90px">예약일자</label>
       <input type="date" id="date"/>
-      <input type="time" id="time"/>
+      <select id="time" class="select"><option value="">시간 선택</option></select>
     </div>
     <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
-  </div>
+  </div>\n    </aside>\n    <main class="main">\n
 
   <div class="card">
     <h3>메뉴</h3>
@@ -114,7 +70,7 @@ document.getElementById('deliverySubmit').onclick = async function(){
   </div>
 </div>
 
-<div id="historyPane" class="tabPane">
+\n    </main>\n  </div>\n</div>\n<div id="historyPane" class="tabPane">
   <div class="card">
     <h3>이전 주문</h3>
     <div id="history"></div>
@@ -127,7 +83,38 @@ document.getElementById('deliverySubmit').onclick = async function(){
   'use strict';
   
   // ===== 전역 변수 =====
-  const cart = loadCart();
+  const cart =
+
+  // ===== 전화번호 숫자만 + 하이픈 표기 =====
+  const phoneEl = document.getElementById('phone');
+  if (phoneEl) {
+    phoneEl.addEventListener('input', (e) => {
+      let digits = phoneEl.value.replace(/\D+/g,'');
+      if (digits.length > 11) digits = digits.slice(0,11);
+      let display = digits;
+      if (digits.length > 3 && digits.length <= 7) {
+        display = digits.slice(0,3) + '-' + digits.slice(3);
+      } else if (digits.length > 7) {
+        display = digits.slice(0,3) + '-' + digits.slice(3,7) + '-' + digits.slice(7);
+      }
+      phoneEl.value = display;
+    });
+  }
+
+  // ===== 예약시간 드롭다운(10:00 ~ 21:30, 30분 간격) =====
+  const timeEl = document.getElementById('time');
+  if (timeEl && timeEl.tagName === 'SELECT') {
+    const mk = (h,m)=> String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+    for (let h=10; h<=21; h++) {
+      for (let m of [0,30]) {
+        const t = mk(h,m);
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t;
+        timeEl.appendChild(opt);
+      }
+    }
+  }
+ loadCart();
   let menuData = [];
   let clientKey = null;
   const fmt = (n) => (n||0).toLocaleString('ko-KR');
@@ -532,47 +519,6 @@ document.getElementById('deliverySubmit').onclick = async function(){
     init();
   }
 })();
-
-// === 배달 주문 제출 ===
-async function submitDeliveryOrder(payload){
-  const res = await fetch('/delivery-orders', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const j = await res.json().catch(()=>({}));
-  if(!res.ok || !j.ok){ throw new Error(j.error||'submit failed'); }
-  return j.order;
-}
-
-document.getElementById('deliverySubmit').onclick = async function(){
-  try{
-    const name = document.getElementById('custName').value.trim();
-    const phone = document.getElementById('custPhone').value.trim();
-    const address = document.getElementById('custAddr').value.trim();
-    const addressDetail = document.getElementById('custAddrDetail').value.trim();
-    const scheduledAt = document.getElementById('custTime').value;
-    const requestMemo = document.getElementById('custMemo').value.trim();
-    if(!name||!phone||!address){ alert('이름/휴대폰/주소는 필수입니다.'); return; }
-
-    let items = [];
-    try{
-      const saved = localStorage.getItem('cart');
-      if(saved){ items = JSON.parse(saved); }
-      if(Array.isArray(window.CART)&&window.CART.length) items = window.CART;
-    }catch(_){}
-    const amount = (items||[]).reduce((s,it)=> s + Number(it.price||0)*(Number(it.qty||1)), 0);
-
-    const order = await submitDeliveryOrder({
-      customer:{ name, phone, address, addressDetail, requestMemo, scheduledAt },
-      items, amount, payment:{ method:'미결제' }
-    });
-    alert('배달 접수 완료! 접수번호: '+order.id);
-  }catch(e){
-    console.error(e);
-    alert('배달 접수 실패: '+e.message);
-  }
-};
 </script>
 
 </div></body></html>
