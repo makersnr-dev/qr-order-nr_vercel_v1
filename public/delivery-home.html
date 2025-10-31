@@ -41,7 +41,10 @@
   <label><input type="radio" name="orderMode" id="orderModeDelivery" checked> 배달(결제)</label>
   <label><input type="radio" name="orderMode" id="orderModeReserve"> 예약(무결제)</label>
 </div>
-
+<div id="reserveBankRow" class="row hidden" style="gap:10px">
+  <button id="bankCopyBtn" class="btn" disabled>입금계좌 복사</button>
+  <span id="bankCopyMsg" class="small"></span>
+</div>
 
 <div class="card" style="margin-bottom:10px">
 <div id="tabs" style="display:flex;gap:8px">
@@ -57,7 +60,7 @@
 <div class="row"><div class="form-row"><label for="phone">연락처</label><input aria-label="연락용 번호(숫자만)" id="phone" inputmode="numeric" pattern="\d{8,13}" placeholder="연락처 (숫자만) *" required="" title="숫자만 8~13자리"/></div></div>
 <div class="row">
 <div class="form-row"><label for="date">예약일자</label><input aria-label="예약일자 (미입력 시 즉시주문)" id="date" inputmode="none" min="2025-10-31" onfocus="this.showPicker &amp;&amp; this.showPicker()" type="date"/></div>
-<div class="form-row time-row"><label for="timePeriod">예약시간</label><div class="time-group" style="display:flex; gap:8px; flex-wrap:wrap; width:100%"><select aria-label="오전/오후" id="timePeriod" name="timePeriod" required=""><option disabled="" selected="" value="">오전/오후</option><option value="AM">오전</option><option value="PM">오후</option></select><select aria-label="시간(1~12)" id="timeHour" name="timeHour" required=""><option disabled="" selected="" value="">시</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><select aria-label="분(5분)" id="timeMinute" name="timeMinute" required=""><option disabled="" selected="" value="">분</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select></div></div>
+<div class="form-row time-row"><label for="time">예약시간</label><div class="time-group" style="display:flex; gap:8px; flex-wrap:wrap; width:100%"><select aria-label="오전/오후" id="timePeriod" name="timePeriod" required=""><option disabled="" selected="" value="">오전/오후</option><option value="AM">오전</option><option value="PM">오후</option></select><select aria-label="시간(1~12)" id="timeHour" name="timeHour" required=""><option disabled="" selected="" value="">시</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><select aria-label="분(5분)" id="timeMinute" name="timeMinute" required=""><option disabled="" selected="" value="">분</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select></div></div>
 </div>
 <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
 </div>
@@ -73,8 +76,6 @@
 <div class="row">
 <div>합계: <b id="sum">0</b>원</div>
 <button class="btn" id="payBtn">결제하기</button>
-<button class="btn hidden" id="bankCopyBtn" style="margin-left:8px">입금계좌 복사</button>
-<span id="bankCopyMsg" class="small hidden" style="margin-left:6px"></span>
 </div>
 </div>
 </div>
@@ -98,11 +99,8 @@
   // ===== 유틸리티 함수 =====
 let __bankInfo = null;
 function showReserveUI(show){
-  var btn = document.getElementById('bankCopyBtn');
-  var msg = document.getElementById('bankCopyMsg');
-  if(btn){ btn.classList.toggle('hidden', !show); }
-  if(msg){ msg.classList.toggle('hidden', !show); }
-}
+  const row = document.getElementById('reserveBankRow');
+  if(row){ row.classList.toggle('hidden', !show); }
   const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
 }
 async function fetchBankInfo(){
