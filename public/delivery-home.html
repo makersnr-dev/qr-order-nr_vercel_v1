@@ -42,8 +42,8 @@
   <label><input type="radio" name="orderMode" id="orderModeReserve"> 예약(무결제)</label>
 </div>
 <div id="reserveBankRow" class="row hidden" style="gap:10px">
-  <button id="bankCopyBtn" class="btn" disabled>입금계좌 복사</button>
-  <span id="bankCopyMsg" class="small"></span>
+  
+  
 </div>
 
 <div class="card" style="margin-bottom:10px">
@@ -111,10 +111,7 @@ async function fetchBankInfo(){
     __bankInfo = (j && j.data) || null;
   }catch(_){ /* ignore */ }
 }
-function copyBankInfo(){
-  try{
-    if(!__bankInfo){ return; }
-    const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
+const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
     navigator.clipboard.writeText(text).then(()=>{
       const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }
     });
@@ -147,7 +144,6 @@ function copyBankInfo(){
     return `${hh}:${mm}`;
   }
 
-
   // ===== 장바구니 관리 =====
   function loadCart() {
     try {
@@ -159,7 +155,7 @@ function copyBankInfo(){
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const raw = localStorage.getItem('qrCart');
       if (!raw) return new Map();
@@ -181,7 +177,7 @@ function copyBankInfo(){
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const arr = Array.from(cart.entries()).filter(([_,q]) => Number(q) > 0);
       localStorage.setItem('qrCart', JSON.stringify(arr));
@@ -291,7 +287,7 @@ function copyBankInfo(){
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const r = await fetch('/menu');
       if (!r.ok) throw new Error('Menu fetch failed');
@@ -306,7 +302,7 @@ function copyBankInfo(){
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
  window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
 renderMenu();
       updateSum();
@@ -326,7 +322,7 @@ renderMenu();
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const r = await fetch('/config');
       if (!r.ok) throw new Error('Config fetch failed');
@@ -462,7 +458,7 @@ renderMenu();
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       sessionStorage.setItem('qrOrderPending', JSON.stringify({
         items,
@@ -498,7 +494,7 @@ renderMenu();
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const tossPayments = TossPayments(clientKey);
       await tossPayments.requestPayment('카드', {
@@ -539,7 +535,7 @@ renderMenu();
       mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
       mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
     }
-    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
+    
 
       const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
       
