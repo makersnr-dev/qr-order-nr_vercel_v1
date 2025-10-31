@@ -3,13 +3,17 @@
 <title>QR Order - 배달/예약</title>
 <script src="https://js.tosspayments.com/v1"></script>
 <style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select,textarea{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
-/* --- Responsive square grid for menu buttons --- */
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #223;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer;padding:8px}
 .menu-card:hover{filter:brightness(1.06)}
 .menu-title{font-weight:600;line-height:1.2;word-break:keep-all;overflow-wrap:anywhere}
 .menu-price{margin-top:6px;opacity:.9;font-size:.9em}
 .required{color:#f88}
+.small{opacity:.8;font-size:14px}
+.tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
+.tabBtn.active{background:#14324a}
+.tabPane{display:none}
+.tabPane.active{display:block}
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
@@ -20,109 +24,144 @@
     <button class="tabBtn" data-tab="history">이전 주문</button>
   </div>
 </div>
+
 <div id="orderPane" class="tabPane active">
-<div class="card">
-  <h3>배송/예약 정보 <span class="required">*</span></h3>
-  <div class="row"><input id="addr" placeholder="배송지 주소 *" required/></div>
-  <div class="row"><input id="name" placeholder="주문자 이름 *" required/></div>
-  <div class="row"><input id="phone" placeholder="연락처 (숫자만) *" required/></div>
-  <div class="row">
-    <label style="width:90px">예약일자</label>
-    <input type="date" id="date"/>
-    <input type="time" id="time"/>
+  <div class="card">
+    <h3>배송/예약 정보 <span class="required">*</span></h3>
+    <div class="row"><input id="addr" placeholder="배송지 주소 *" required/></div>
+    <div class="row"><input id="name" placeholder="주문자 이름 *" required/></div>
+    <div class="row"><input id="phone" placeholder="연락처 (숫자만) *" required/></div>
+    <div class="row">
+      <label style="width:90px">예약일자</label>
+      <input type="date" id="date"/>
+      <input type="time" id="time"/>
+    </div>
+    <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
   </div>
-  <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
-</div>
-<style>
-.tabBtn{padding:8px 12px;border-radius:8px;border:1px solid #335;background:#0b1a2b;color:#e6edf3;cursor:pointer}
-.tabBtn.active{background:#14324a}
-.tabPane{display:none}
-.tabPane.active{display:block}
-</style>
 
-<div class="card">
-  <h3>메뉴</h3>
-  <div id="menu"></div>
+  <div class="card">
+    <h3>메뉴</h3>
+    <div id="menu" class="menu-grid"></div>
+  </div>
+
+  <div class="card">
+    <h3>장바구니 <span id="cartCountBadge" class="small"></span></h3>
+    <div id="cartList"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>합계: <b id="sum">0</b>원</div>
+      <button class="btn" id="payBtn">결제하기</button>
+    </div>
+  </div>
 </div>
 
-<div class="card">
-  <h3>장바구니 <span id="cartCountBadge" class="small"></span></h3>
-  <div id="cartList"></div>
-</div>
-
-<div class="card">
-  <div class="row">
-    <div>합계: <b id="sum">0</b>원</div>
-    <button class="btn" id="payBtn">결제하기</button>
+<div id="historyPane" class="tabPane">
+  <div class="card">
+    <h3>이전 주문</h3>
+    <div id="history"></div>
+    <div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div>
   </div>
 </div>
 
 <script>
+(function() {
+  'use strict';
+  
+  // ===== 전역 변수 =====
   const cart = loadCart();
   let menuData = [];
   let clientKey = null;
-  const fmt = (n)=> (n||0).toLocaleString('ko-KR');
+  const fmt = (n) => (n||0).toLocaleString('ko-KR');
 
-  function setPayEnabled(enabled){
-    const btn = document.getElementById('payBtn');
-    btn.disabled = !enabled;
-    btn.style.opacity = enabled ? '1' : '0.5';
-    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
-  }
-  function updateSum(){
-    let sum = 0;
-    for(const [id, qty] of cart){
-      const m = menuData.find(x=> x.id===id);
-      if(m) sum += (Number(m.price)||0) * (Number(qty)||0);
+  // ===== 유틸리티 함수 =====
+  function getElement(id) {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.warn(`Element not found: ${id}`);
     }
-    document.getElementById('sum').textContent = fmt(sum);
-    setPayEnabled(sum>0 && cart.size>0);
-    return sum;
+    return el;
   }
-  
-  // --- Cart Persistence & Rendering ---
+
+  function getElementValue(id, defaultValue = '') {
+    const el = getElement(id);
+    return el ? (el.value || defaultValue).trim() : defaultValue;
+  }
+
+  // ===== 장바구니 관리 =====
   function loadCart() {
     try {
       const raw = localStorage.getItem('qrCart');
       if (!raw) return new Map();
       const arr = JSON.parse(raw);
-      const m = new Map(arr.filter(([_,q]) => Number(q) > 0));
-      return m;
-    } catch (_) { return new Map(); }
+      return new Map(arr.filter(([_,q]) => Number(q) > 0));
+    } catch (e) {
+      console.error('Cart load error:', e);
+      return new Map();
+    }
   }
+  
   function saveCart() {
     try {
       const arr = Array.from(cart.entries()).filter(([_,q]) => Number(q) > 0);
       localStorage.setItem('qrCart', JSON.stringify(arr));
-    } catch (_) {}
+    } catch (e) {
+      console.error('Cart save error:', e);
+    }
   }
-  function updateCartBadge(){
-    const cnt = Array.from(cart.values()).reduce((a,b)=>a+Number(b||0),0);
-    const el = document.getElementById('cartCountBadge');
-    if (!el) return;
-    el.textContent = cnt ? `(${cnt}개 담김)` : '';
+
+  function setPayEnabled(enabled) {
+    const btn = getElement('payBtn');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.style.opacity = enabled ? '1' : '0.5';
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
   }
+  
+  function updateSum() {
+    let sum = 0;
+    for (const [id, qty] of cart) {
+      const m = menuData.find(x => x.id === id);
+      if (m) sum += (Number(m.price)||0) * (Number(qty)||0);
+    }
+    const sumEl = getElement('sum');
+    if (sumEl) sumEl.textContent = fmt(sum);
+    setPayEnabled(sum > 0 && cart.size > 0);
+    return sum;
+  }
+  
+  function updateCartBadge() {
+    const cnt = Array.from(cart.values()).reduce((a,b) => a + Number(b||0), 0);
+    const el = getElement('cartCountBadge');
+    if (el) {
+      el.textContent = cnt ? `(${cnt}개 담김)` : '';
+    }
+  }
+  
   function renderCart() {
-    const box = document.getElementById('cartList');
+    const box = getElement('cartList');
     if (!box) return;
+    
     if (cart.size === 0) {
-      box.innerHTML = '<div class="small">담긴 항목이 없습니다 메뉴를 눌러 추가해주세요</div>';
+      box.innerHTML = '<div class="small">담긴 항목이 없습니다. 메뉴를 눌러 추가해주세요.</div>';
       updateCartBadge();
       return;
     }
+    
     const rows = [];
     for (const [id, qty] of cart) {
-      const m = menuData.find(x=>x.id===id);
+      const m = menuData.find(x => x.id === id);
       if (!m) continue;
-      const price = Number(m.price)||0;
-      const line = price * (Number(qty)||0);
+      const price = Number(m.price) || 0;
+      const line = price * (Number(qty) || 0);
       rows.push(`
         <div class="row" style="margin:6px 0; justify-content: space-between;">
           <div style="min-width:140px">${m.name} <span class="small">x ${qty}</span></div>
           <div style="min-width:80px">${fmt(line)}원</div>
           <div class="row" style="gap:6px">
-            <button class="btn" onclick="subItem('${m.id}')">-</button>
-            <button class="btn" onclick="addItem('${m.id}')">+</button>
+            <button class="btn" onclick="window.subItem('${m.id}')">-</button>
+            <button class="btn" onclick="window.addItem('${m.id}')">+</button>
           </div>
         </div>
       `);
@@ -131,56 +170,100 @@
     updateCartBadge();
   }
 
-  function renderMenu(){
-    const box = document.getElementById('menu');
-    box.classList.add('menu-grid');
-    box.innerHTML = menuData.map(m=>`
-      <button class="menu-card" onclick="addItem('${m.id}')">
+  function renderMenu() {
+    const box = getElement('menu');
+    if (!box) return;
+    
+    box.innerHTML = menuData.map(m => `
+      <button class="menu-card" onclick="window.addItem('${m.id}')">
         <div class="menu-title">${m.name}</div>
         <div class="menu-price">${fmt(m.price)}원</div>
       </button>
     `).join('');
   }
 
-  function addItem(id){ cart.set(id,(cart.get(id)||0)+1); saveCart(); renderMenu(); renderCart(); updateSum(); }
-  function subItem(id){ const v=(cart.get(id)||0)-1; if(v<=0) cart.delete(id); else cart.set(id,v); saveCart(); renderMenu(); renderCart(); updateSum(); }
-  async function loadMenu(){ const r=await fetch('/menu'); menuData=await r.json(); renderMenu(); updateSum(); }
-  async function loadClientKey(){ const r=await fetch('/config'); const j=await r.json(); clientKey=j.clientKey; }
-  function getAmount(){ return Number(document.getElementById('sum').textContent.replace(/[^0-9]/g,''))||0; }
+  // ===== 장바구니 아이템 추가/삭제 (전역 노출) =====
+  window.addItem = function(id) {
+    cart.set(id, (cart.get(id) || 0) + 1);
+    saveCart();
+    renderMenu();
+    renderCart();
+    updateSum();
+  };
+  
+  window.subItem = function(id) {
+    const v = (cart.get(id) || 0) - 1;
+    if (v <= 0) cart.delete(id);
+    else cart.set(id, v);
+    saveCart();
+    renderMenu();
+    renderCart();
+    updateSum();
+  };
 
-  function makeOrderId(){ return 'ORD-'+Math.random().toString(36).slice(2,10)+'-'+Date.now(); }
+  // ===== API 호출 =====
+  async function loadMenu() {
+    try {
+      const r = await fetch('/menu');
+      if (!r.ok) throw new Error('Menu fetch failed');
+      menuData = await r.json();
+      renderMenu();
+      updateSum();
+    } catch (e) {
+      console.error('메뉴 로드 실패:', e);
+      alert('메뉴를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.');
+    }
+  }
+  
+  async function loadClientKey() {
+    try {
+      const r = await fetch('/config');
+      if (!r.ok) throw new Error('Config fetch failed');
+      const j = await r.json();
+      clientKey = j.clientKey;
+    } catch (e) {
+      console.error('클라이언트 키 로드 실패:', e);
+    }
+  }
 
   // ===== 배달 정보 수집 및 검증 =====
   function getDeliveryInfo() {
-    const addr = (document.getElementById('addr').value||'').trim();
-    const name = (document.getElementById('name').value||'').trim();
-    const phone = (document.getElementById('phone').value||'').trim();
-    const date = document.getElementById('date').value;
-    const time = document.getElementById('time').value;
-    const note = (document.getElementById('note').value||'').trim();
+    // 안전하게 값 가져오기
+    const addr = getElementValue('addr');
+    const name = getElementValue('name');
+    const phone = getElementValue('phone');
+    const date = getElementValue('date');
+    const time = getElementValue('time');
+    const note = getElementValue('note');
 
     // 필수 필드 검증
     if (!addr) {
       alert('배송지 주소를 입력해주세요.');
-      document.getElementById('addr').focus();
+      const addrEl = getElement('addr');
+      if (addrEl) addrEl.focus();
       return null;
     }
+    
     if (!name) {
       alert('주문자 이름을 입력해주세요.');
-      document.getElementById('name').focus();
+      const nameEl = getElement('name');
+      if (nameEl) nameEl.focus();
       return null;
     }
+    
     if (!phone) {
       alert('연락처를 입력해주세요.');
-      document.getElementById('phone').focus();
+      const phoneEl = getElement('phone');
+      if (phoneEl) phoneEl.focus();
       return null;
     }
 
-    // 전화번호 형식 검증 (숫자만)
+    // 전화번호 형식 검증
     const phoneClean = phone.replace(/[^0-9]/g, '');
     if (phoneClean.length < 10) {
       alert('올바른 연락처를 입력해주세요 (10자리 이상)');
-      document.getElementById('phone').focus();
+      const phoneEl = getElement('phone');
+      if (phoneEl) phoneEl.focus();
       return null;
     }
 
@@ -201,25 +284,40 @@
     };
   }
 
-  async function requestPay(){
+  function getAmount() {
+    const sumEl = getElement('sum');
+    if (!sumEl) return 0;
+    return Number(sumEl.textContent.replace(/[^0-9]/g, '')) || 0;
+  }
+
+  function makeOrderId() {
+    return 'ORD-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now();
+  }
+
+  // ===== 결제 요청 =====
+  async function requestPay() {
     const amount = getAmount();
     
     // 장바구니 검증
-    if(cart.size===0 || amount<=0){ 
-      alert('메뉴를 담아 주세요'); 
-      return; 
+    if (cart.size === 0 || amount <= 0) {
+      alert('메뉴를 담아 주세요');
+      return;
     }
 
     // 배달 정보 수집 및 검증
     const deliveryInfo = getDeliveryInfo();
     if (!deliveryInfo) {
-      return; // 검증 실패 시 중단
+      return; // 검증 실패
     }
 
-    if(!clientKey){ await loadClientKey(); }
-    if(!window.TossPayments || !clientKey){ 
-      alert('결제 모듈 초기화 실패'); 
-      return; 
+    // 클라이언트 키 로드
+    if (!clientKey) {
+      await loadClientKey();
+    }
+    
+    if (!window.TossPayments || !clientKey) {
+      alert('결제 모듈 초기화 실패. 페이지를 새로고침해주세요.');
+      return;
     }
 
     const orderId = makeOrderId();
@@ -227,92 +325,176 @@
     const origin = window.location.origin;
     const successUrl = `${origin}/payment/success`;
     const failUrl = `${origin}/payment/fail`;
-    const items = Array.from(cart.entries()).map(([id,qty])=>[id,qty]);
+    const items = Array.from(cart.entries()).map(([id, qty]) => [id, qty]);
 
-    // sessionStorage에 배달 정보 포함하여 저장
-    sessionStorage.setItem('qrOrderPending', JSON.stringify({ 
-      items, 
-      amount, 
-      orderId,
-      deliveryInfo,
-      orderType: 'delivery'
-    }));
+    // 주문 정보 저장
+    try {
+      sessionStorage.setItem('qrOrderPending', JSON.stringify({
+        items,
+        amount,
+        orderId,
+        deliveryInfo,
+        orderType: 'delivery'
+      }));
+    } catch (e) {
+      console.error('Session storage error:', e);
+      alert('주문 정보 저장 실패. 다시 시도해주세요.');
+      return;
+    }
 
-    try{
+    // 결제 요청
+    try {
       const tossPayments = TossPayments(clientKey);
-      await tossPayments.requestPayment('카드',{ 
-        amount, 
-        orderId, 
-        orderName, 
-        successUrl, 
+      await tossPayments.requestPayment('카드', {
+        amount,
+        orderId,
+        orderName,
+        successUrl,
         failUrl,
         customerName: deliveryInfo.name,
         customerMobilePhone: deliveryInfo.phone
       });
-    }catch(e){
+    } catch (e) {
       const code = e && (e.code || e.name);
       const ignorable = ['USER_CANCEL', 'PAY_PROCESS_CANCELED', 'POPUP_CLOSED'];
-      if (ignorable.includes(code)) { 
-        return; 
+      
+      if (ignorable.includes(code)) {
+        // 사용자가 취소한 경우 조용히 처리
+        return;
       }
+      
       console.error('[TossPayments error]', e);
       const reason = encodeURIComponent(code || 'UNKNOWN');
       window.location.href = `/payment/fail?reason=${reason}`;
     }
   }
 
-  document.getElementById('payBtn').onclick = requestPay;
-  setPayEnabled(false); 
-  loadClientKey(); 
-  loadMenu();
-  renderCart(); 
-  updateCartBadge();
-</script>
-</div>
-<div id="historyPane" class="tabPane" style="display:none">
-  <div class="card">
-    <h3>이전 주문</h3>
-    <div id="history"></div>
-    <div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div>
-  </div>
-</div>
-
-<script>
-function renderHistoryInto(elId){
-  var box=document.getElementById(elId);
-  if(!box) return;
-  try{
-    var arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
-    if(!arr.length){ 
-      box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; 
-      return; 
-    }
-    box.innerHTML = arr.slice(-50).reverse().map(function(o){
-      var d=new Date(o.time||Date.now());
-      var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
-      var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
-      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
-      var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
-      var amt=o.amount||0;
-      return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';
-    }).join('');
-  }catch(e){ box.innerHTML=''; }
-}
-
-document.addEventListener('DOMContentLoaded', function(){
-  var tabs=document.querySelectorAll('.tabBtn');
-  var orderPane=document.getElementById('orderPane');
-  var historyPane=document.getElementById('historyPane');
-  function activate(which){
-    tabs.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===which); });
-    if(orderPane) orderPane.style.display = (which==='order') ? 'block' : 'none';
-    if(historyPane){
-      historyPane.style.display = (which==='history') ? 'block' : 'none';
-      if(which==='history') renderHistoryInto('history');
+  // ===== 주문 이력 =====
+  function renderHistoryInto(elId) {
+    const box = getElement(elId);
+    if (!box) return;
+    
+    try {
+      const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
+      
+      if (!arr.length) {
+        box.innerHTML = '<div class="small">표시할 내역이 없습니다.</div>';
+        return;
+      }
+      
+      // 배달 주문만 필터링
+      const deliveryOrders = arr.filter(o => o.orderType === 'delivery');
+      
+      if (!deliveryOrders.length) {
+        box.innerHTML = '<div class="small">배달 주문 내역이 없습니다.</div>';
+        return;
+      }
+      
+      box.innerHTML = deliveryOrders.slice(-50).reverse().map(function(o) {
+        const d = new Date(o.time || Date.now());
+        const m = ('0' + (d.getMonth() + 1)).slice(-2);
+        const dd = ('0' + d.getDate()).slice(-2);
+        const hh = ('0' + d.getHours()).slice(-2);
+        const mi = ('0' + d.getMinutes()).slice(-2);
+        
+        const items = (o.items || []).map(function(p) {
+          return p[0] + '×' + p[1];
+        }).join(', ');
+        
+        const amt = o.amount || 0;
+        
+        // 배달 정보 표시
+        const deliveryInfo = [];
+        if (o.name) deliveryInfo.push('주문자: ' + o.name);
+        if (o.addr) deliveryInfo.push('주소: ' + o.addr);
+        if (o.phone) deliveryInfo.push('연락처: ' + o.phone);
+        if (o.reserve) deliveryInfo.push('예약: ' + o.reserve);
+        if (o.note) deliveryInfo.push('요청: ' + o.note);
+        
+        const deliveryInfoHtml = deliveryInfo.length 
+          ? '<div class="small" style="margin-top:4px;opacity:0.7">' + deliveryInfo.join(' · ') + '</div>'
+          : '';
+        
+        return '<div style="padding:8px 0;border-bottom:1px solid #223">' +
+          '<div><strong>' + m + '/' + dd + ' ' + hh + ':' + mi + '</strong></div>' +
+          '<div class="small" style="margin-top:2px">메뉴: ' + items + '</div>' +
+          deliveryInfoHtml +
+          '<div style="margin-top:4px"><strong>합계: ' + amt.toLocaleString('ko-KR') + '원</strong></div>' +
+          '</div>';
+      }).join('');
+    } catch (e) {
+      console.error('History render error:', e);
+      box.innerHTML = '<div class="small">이력을 불러올 수 없습니다.</div>';
     }
   }
-  activate('order');
-  tabs.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
-});
+
+  // ===== 탭 전환 =====
+  function initTabs() {
+    const tabs = document.querySelectorAll('.tabBtn');
+    const orderPane = getElement('orderPane');
+    const historyPane = getElement('historyPane');
+    
+    if (!tabs.length || !orderPane || !historyPane) {
+      console.warn('Tab elements not found');
+      return;
+    }
+    
+    function activate(which) {
+      tabs.forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tab === which);
+      });
+      
+      orderPane.style.display = (which === 'order') ? 'block' : 'none';
+      historyPane.style.display = (which === 'history') ? 'block' : 'none';
+      
+      if (which === 'history') {
+        renderHistoryInto('history');
+      }
+    }
+    
+    activate('order');
+    
+    tabs.forEach(function(b) {
+      b.addEventListener('click', function() {
+        activate(b.dataset.tab);
+      });
+    });
+  }
+
+  // ===== 초기화 =====
+  function init() {
+    console.log('Initializing delivery page...');
+    
+    // 결제 버튼 연결
+    const payBtn = getElement('payBtn');
+    if (payBtn) {
+      payBtn.onclick = requestPay;
+    } else {
+      console.error('Pay button not found!');
+    }
+    
+    // 초기 상태 설정
+    setPayEnabled(false);
+    
+    // 데이터 로드
+    loadClientKey();
+    loadMenu();
+    renderCart();
+    updateCartBadge();
+    
+    // 탭 초기화
+    initTabs();
+    
+    console.log('Initialization complete');
+  }
+
+  // DOM 로드 완료 후 초기화
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 </script>
+
 </div></body></html>
