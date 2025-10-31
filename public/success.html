@@ -36,7 +36,15 @@
   const okBtn = document.getElementById('okBtn');
   
   function showModal(){ modal.classList.remove('hidden'); okBtn.focus(); }
-  function closeAndGoHome(){ window.location.href = '/'; }
+  function closeAndGoHome(){ 
+  try{
+    const last = JSON.parse(sessionStorage.getItem('qrOrderPending')||'{}');
+    const urlType = new URL(location.href).searchParams.get('from');
+    const t = last.orderType || urlType || 'store';
+    if(t==='delivery'){ window.location.href = '/delivery/home'; }
+    else{ window.location.href = '/store'; }
+  }catch(_){ window.location.href = '/store'; }
+}
   okBtn.addEventListener('click', closeAndGoHome); 
   window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAndGoHome(); });
   modal.addEventListener('click', e=>{ if(e.target.classList.contains('modal-backdrop')) closeAndGoHome(); });

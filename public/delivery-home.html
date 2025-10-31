@@ -350,7 +350,7 @@ renderMenu();
     const orderId = makeOrderId();
     const orderName = '배달/예약 주문';
     const origin = window.location.origin;
-    const successUrl = `${origin}/payment/success`;
+    const successUrl = `${origin}/payment/success?from=delivery`;
     const failUrl = `${origin}/payment/fail`;
     const items = Array.from(cart.entries()).map(([id, qty]) => [id, qty]);
 

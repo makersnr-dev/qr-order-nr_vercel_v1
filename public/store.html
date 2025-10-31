@@ -200,10 +200,10 @@ renderMenu(); updateSum(); }
     const orderId=makeOrderId();
     const orderName='QR 주문';
     const origin=window.location.origin;
-    const successUrl = `${origin}/payment/success`;
+    const successUrl = `${origin}/payment/success?from=store`;
     const failUrl = `${origin}/payment/fail`;
     const items=Array.from(cart.entries()).map(([id,qty])=>[id,qty]);
-    sessionStorage.setItem('qrOrderPending', JSON.stringify({ tableNo, items, amount, orderId }));
+    sessionStorage.setItem('qrOrderPending', JSON.stringify({ tableNo, items, amount, orderId, orderType: 'store' }));
     try{
       const tossPayments=TossPayments(clientKey);
       await tossPayments.requestPayment('카드',{ amount, orderId, orderName, successUrl, failUrl });
