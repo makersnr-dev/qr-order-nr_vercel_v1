@@ -30,6 +30,8 @@
   .form-row.time-row label{width:100%; min-width:0; margin-bottom:6px}
   .form-row.time-row .time-group{width:100%}
 }
+
+#historyFilters .btn.active{background:#1e4b6a; border-color:#4b7ea3}
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
@@ -66,7 +68,14 @@
 </div>
 </div>
 </div>
-<div class="tabPane" id="historyPane">
+<div class="tabPane" id="historyPane"><div class="row" id="historyFilterBar" style="gap:8px; align-items:center; margin-bottom:8px;">
+<div class="small">이전 주문 보기:</div>
+<div class="btn-group" id="historyFilters">
+<button class="btn sm" data-f="all" type="button">전체</button>
+<button class="btn sm" data-f="store" type="button">매장</button>
+<button class="btn sm" data-f="delivery" type="button">배달/예약</button>
+</div>
+</div>
 <div class="card">
 <h3>이전 주문</h3>
 <div id="history"></div>
@@ -398,13 +407,14 @@
     
     try {
       const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
+      const arrFiltered = (historyFilter==='all') ? arr : arr.filter(o => historyFilter==='delivery' ? isDeliveryOrder(o) : !isDeliveryOrder(o));
       
       if (!arr.length) {
         box.innerHTML = '<div class="small">표시할 내역이 없습니다.</div>';
         return;
       }
       
-      box.innerHTML = arr.slice(-50).reverse().map(function(o) {
+      box.innerHTML = arrFiltered.slice(-50).reverse().map(function(o) {
         const d = new Date(o.time || Date.now());
         const m = ('0' + (d.getMonth() + 1)).slice(-2);
         const dd = ('0' + d.getDate()).slice(-2);
@@ -500,4 +510,35 @@
   }
 })();
 </script>
-</div></body></html>
+</div>
+<script>
+/* HISTORY FILTER */
+var historyFilter = (localStorage.getItem('qrHistoryFilter') || 'all');
+function updateFilterUI(){
+  try{
+    document.querySelectorAll('#historyFilters .btn').forEach(function(b){
+      if (b.dataset.f === historyFilter) b.classList.add('active'); else b.classList.remove('active');
+    });
+  }catch(_){}
+}
+function setHistoryFilter(f){
+  historyFilter = f || 'all';
+  try{ localStorage.setItem('qrHistoryFilter', historyFilter); }catch(_){}
+  try{ renderHistoryInto('history'); }catch(_){}
+  updateFilterUI();
+}
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    document.querySelectorAll('#historyFilters .btn').forEach(function(b){
+      b.addEventListener('click', function(){ setHistoryFilter(b.dataset.f); });
+    });
+    updateFilterUI();
+  }catch(_){}
+});
+
+function isDeliveryOrder(o){
+  return (o && (o.orderType === 'delivery' || o.tableNo === '배달'));
+}
+</script>
+
+</body></html>
