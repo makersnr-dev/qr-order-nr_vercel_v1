@@ -12,8 +12,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const SSE_CLIENTS = new Set();
 function sseSendAll(payload){ const data = `data: ${JSON.stringify(payload)}\n\n`; for(const res of SSE_CLIENTS){ try{ res.write(data);}catch(_){ } } }
-
-const DELIVERY_ORDERS = [];
 const PORT = process.env.PORT || 3001;
 
 // CORS (whitelist)
@@ -131,18 +129,20 @@ export default app;
 app.get('/store', (_req,res)=> res.sendFile(path.join(__dirname,'public','store.html')));
 app.get('/delivery', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-login.html')));
 app.get('/delivery/home', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-home.html')));
+const DELIVERY_ORDERS = [];
 
-// ===== Delivery Orders =====
+
+// ===== Delivery Orders (Collection/Basic Admin) =====
 app.post('/delivery-orders', async (req,res)=>{
   try{
     const { customer={}, items=[], amount=0, payment={} } = req.body||{};
     const { name, phone, address, addressDetail, requestMemo, scheduledAt } = customer;
-    if(!name||!phone||!address||!Array.isArray(items)||items.length===0){
-      return res.status(400).json({ ok:false, error:'name/phone/address/items required' });
-    }
+    if(!name||!phone||!address){ return res.status(400).json({ ok:false, error:'name/phone/address required' }); }
+    if(!Array.isArray(items)){ return res.status(400).json({ ok:false, error:'items must be array' }); }
     const id = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
     const order = {
-      id, type:'delivery', status:'신규', items, amount: Number(amount)||0,
+      id, type:'delivery', status:'신규',
+      items, amount: Number(amount)||0,
       customer:{ name, phone, address, addressDetail: addressDetail||'', requestMemo: requestMemo||'', scheduledAt: scheduledAt||null },
       payment, createdAt: new Date().toISOString()
     };
@@ -151,7 +151,6 @@ app.post('/delivery-orders', async (req,res)=>{
   }catch(e){ console.error(e); res.status(500).json({ ok:false, error:'server-error' }); }
 });
 
-// admin list / update
 app.get('/delivery-orders', requireAuth, (_req,res)=>{
   res.json(DELIVERY_ORDERS);
 });
@@ -169,4 +168,3 @@ app.delete('/delivery-orders/:id', requireAuth, (req,res)=>{
   DELIVERY_ORDERS.splice(idx,1);
   res.json({ ok:true });
 });
-
