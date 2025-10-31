@@ -9,11 +9,10 @@ async function submitDeliveryOrder(payload){
     headers:{ 'Content-Type':'application/json' },
     body: JSON.stringify(payload)
   });
-  const j = await res.json();
+  const j = await res.json().catch(()=>({}));
   if(!res.ok || !j.ok){ throw new Error(j.error||'submit failed'); }
   return j.order;
 }
-
 
 document.getElementById('deliverySubmit').onclick = async function(){
   try{
@@ -23,36 +22,26 @@ document.getElementById('deliverySubmit').onclick = async function(){
     const addressDetail = document.getElementById('custAddrDetail').value.trim();
     const scheduledAt = document.getElementById('custTime').value;
     const requestMemo = document.getElementById('custMemo').value.trim();
+    if(!name||!phone||!address){ alert('이름/휴대폰/주소는 필수입니다.'); return; }
 
-    if(!name || !phone || !address){ alert('이름, 휴대폰, 주소는 필수입니다.'); return; }
-
-    // 수집: 장바구니 항목
     let items = [];
     try{
       const saved = localStorage.getItem('cart');
       if(saved){ items = JSON.parse(saved); }
       if(Array.isArray(window.CART)&&window.CART.length) items = window.CART;
     }catch(_){}
-
-    if(!Array.isArray(items) || items.length===0){
-      if(!confirm('장바구니가 비어 있습니다. 그래도 접수하시겠습니까?')) return;
-    }
-
     const amount = (items||[]).reduce((s,it)=> s + Number(it.price||0)*(Number(it.qty||1)), 0);
 
     const order = await submitDeliveryOrder({
       customer:{ name, phone, address, addressDetail, requestMemo, scheduledAt },
       items, amount, payment:{ method:'미결제' }
     });
-
-    alert('배달 접수 완료! 접수번호: ' + order.id + '\n관리자 확인 후 안내드릴게요.');
-    // optional: redirect or clear
+    alert('배달 접수 완료! 접수번호: '+order.id);
   }catch(e){
     console.error(e);
-    alert('배달 접수 중 오류: ' + e.message);
+    alert('배달 접수 실패: '+e.message);
   }
 };
-
 </script>
 <style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select,textarea{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
@@ -69,7 +58,7 @@ document.getElementById('deliverySubmit').onclick = async function(){
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
-
+<div class="row"><button class="btn" id="deliverySubmit">배달 주문 제출</button></div>
 <div class="card" id="deliveryForm">
   <h3>배달 정보</h3>
   <div class="row">
@@ -85,7 +74,6 @@ document.getElementById('deliverySubmit').onclick = async function(){
     <input id="custMemo" placeholder="요청사항(선택)" style="flex:1"/>
   </div>
 </div>
-<div class="row"><button class="btn" id="deliverySubmit">배달 주문 제출</button></div>
 
 <div class="card" style="margin-bottom:10px">
   <div id="tabs" style="display:flex;gap:8px">
@@ -552,11 +540,10 @@ async function submitDeliveryOrder(payload){
     headers:{ 'Content-Type':'application/json' },
     body: JSON.stringify(payload)
   });
-  const j = await res.json();
+  const j = await res.json().catch(()=>({}));
   if(!res.ok || !j.ok){ throw new Error(j.error||'submit failed'); }
   return j.order;
 }
-
 
 document.getElementById('deliverySubmit').onclick = async function(){
   try{
@@ -566,36 +553,26 @@ document.getElementById('deliverySubmit').onclick = async function(){
     const addressDetail = document.getElementById('custAddrDetail').value.trim();
     const scheduledAt = document.getElementById('custTime').value;
     const requestMemo = document.getElementById('custMemo').value.trim();
+    if(!name||!phone||!address){ alert('이름/휴대폰/주소는 필수입니다.'); return; }
 
-    if(!name || !phone || !address){ alert('이름, 휴대폰, 주소는 필수입니다.'); return; }
-
-    // 수집: 장바구니 항목
     let items = [];
     try{
       const saved = localStorage.getItem('cart');
       if(saved){ items = JSON.parse(saved); }
       if(Array.isArray(window.CART)&&window.CART.length) items = window.CART;
     }catch(_){}
-
-    if(!Array.isArray(items) || items.length===0){
-      if(!confirm('장바구니가 비어 있습니다. 그래도 접수하시겠습니까?')) return;
-    }
-
     const amount = (items||[]).reduce((s,it)=> s + Number(it.price||0)*(Number(it.qty||1)), 0);
 
     const order = await submitDeliveryOrder({
       customer:{ name, phone, address, addressDetail, requestMemo, scheduledAt },
       items, amount, payment:{ method:'미결제' }
     });
-
-    alert('배달 접수 완료! 접수번호: ' + order.id + '\n관리자 확인 후 안내드릴게요.');
-    // optional: redirect or clear
+    alert('배달 접수 완료! 접수번호: '+order.id);
   }catch(e){
     console.error(e);
-    alert('배달 접수 중 오류: ' + e.message);
+    alert('배달 접수 실패: '+e.message);
   }
 };
-
 </script>
 
 </div></body></html>
