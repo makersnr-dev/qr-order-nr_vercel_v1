@@ -41,11 +41,6 @@
   <label><input type="radio" name="orderMode" id="orderModeDelivery" checked> 배달(결제)</label>
   <label><input type="radio" name="orderMode" id="orderModeReserve"> 예약(무결제)</label>
 </div>
-<div id="reserveBankRow" class="row hidden" style="gap:10px">
-  <button id="bankCopyBtn" class="btn" disabled>입금계좌 복사</button>
-  <span id="bankCopyMsg" class="small"></span>
-</div>
-
 <div class="card" style="margin-bottom:10px">
 <div id="tabs" style="display:flex;gap:8px">
 <button class="tabBtn active" data-tab="order">주문</button>
@@ -75,7 +70,7 @@
 <div class="card">
 <div class="row">
 <div>합계: <b id="sum">0</b>원</div>
-<button class="btn" id="payBtn">결제하기</button>
+<button class="btn" id="payBtn">결제하기</button><button class="btn hidden" id="bankCopyBtn" style="margin-left:8px">입금계좌 복사</button><span id="bankCopyMsg" class="small hidden" style="margin-left:6px"></span>
 </div>
 </div>
 </div>
@@ -99,8 +94,11 @@
   // ===== 유틸리티 함수 =====
 let __bankInfo = null;
 function showReserveUI(show){
-  const row = document.getElementById('reserveBankRow');
-  if(row){ row.classList.toggle('hidden', !show); }
+  const btn = document.getElementById('bankCopyBtn');
+  const msg = document.getElementById('bankCopyMsg');
+  if(btn){ btn.classList.toggle('hidden', !show); }
+  if(msg){ msg.classList.toggle('hidden', !show); }
+}
   const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
 }
 async function fetchBankInfo(){
@@ -162,8 +160,8 @@ function copyBankInfo(){
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -184,8 +182,8 @@ function copyBankInfo(){
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -294,8 +292,8 @@ function copyBankInfo(){
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -309,8 +307,8 @@ function copyBankInfo(){
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
  window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
@@ -329,8 +327,8 @@ renderMenu();
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -465,8 +463,8 @@ renderMenu();
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -501,8 +499,8 @@ renderMenu();
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
@@ -542,8 +540,8 @@ renderMenu();
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
     if(mDel && mRes){
-      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
-      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); updatePayButton(); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); updatePayButton(); }});
     }
     if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
