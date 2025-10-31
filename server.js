@@ -43,6 +43,9 @@ let MENU = [
 ];
 let ORDERS = [];
 
+// Bank info (in-memory)
+let BANK_INFO = { bank: '', account: '', holder: '' };
+
 // Admin auth
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
 const TOKENS = new Set();
@@ -64,7 +67,7 @@ const CODE_OVERRIDE = {}; // { [date] : '1234' }
 function defaultCodeFor(dateStr){ const h=crypto.createHmac('sha256', CODE_SECRET).update(String(dateStr)).digest('hex'); return digitsFromHex(h); }
 async function getTodayCode(){ const t=todayStr(); if(CODE_OVERRIDE[t]) return { date:t, code:CODE_OVERRIDE[t], override:true }; return { date:t, code: defaultCodeFor(t), override:false }; }
 
-app.get('/daily-code', requireAuth, async (_req,res)=>{ try{ res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('code error'); } });
+app.get('/daily-code',  async (_req,res)=>{ try{ res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('code error'); } });
 app.post('/daily-code/regen', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); const rand=String(Math.floor(1000+Math.random()*9000)); CODE_OVERRIDE[t]=rand; res.json({ date:t, code:rand, override:true }); }catch(e){ console.error(e); res.status(500).send('regen error'); } });
 app.post('/daily-code/clear', requireAuth, async (_req,res)=>{ try{ const t=todayStr(); delete CODE_OVERRIDE[t]; res.json(await getTodayCode()); }catch(e){ console.error(e); res.status(500).send('clear error'); } });
 
@@ -100,6 +103,23 @@ app.get('/events/orders', (req,res)=>{ res.setHeader('Content-Type','text/event-
   req.on('close',()=>{ try{ SSE_CLIENTS.delete(res); res.end(); }catch(_){}}); res.setHeader('Cache-Control','no-cache'); res.setHeader('Connection','keep-alive'); res.flushHeaders?.(); const client={res}; clients.add(client); req.on('close', ()=> clients.delete(client)); });
 function broadcastOrder(o){ const data=JSON.stringify({ type:'order', id:o.id, tableNo:o.tableNo, amount:o.amount, createdAt:o.createdAt }); for(const c of clients){ try{ c.res.write(`event: order\n`); c.res.write(`data: ${data}\n\n`); }catch(_){} } }
 app.get('/orders', (_req,res)=> res.json(ORDERS));
+// Bank info (admin only)
+app.get('/bank-info', requireAuth, (_req,res)=>{
+  res.json({ ok:true, data: BANK_INFO });
+});
+app.post('/bank-info', requireAuth, (req,res)=>{
+  try{
+    const { bank, account, holder } = req.body || {};
+    BANK_INFO.bank = String(bank||'').slice(0,50);
+    BANK_INFO.account = String(account||'').slice(0,64);
+    BANK_INFO.holder = String(holder||'').slice(0,50);
+    return res.json({ ok:true });
+  }catch(e){
+    console.error('bank-info save error', e);
+    return res.status(500).json({ ok:false });
+  }
+});
+
 app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId, deliveryInfo, orderType } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', deliveryInfo: (deliveryInfo||null), orderType: (orderType||null), status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
