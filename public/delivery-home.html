@@ -21,6 +21,15 @@
 .form-row{display:flex;align-items:center;gap:12px;margin:8px 0;flex-wrap:wrap}
 .form-row label{width:110px;min-width:110px;text-align:left;opacity:.95}
 .form-row input{flex:1}
+
+/* 예약시간 라벨을 드롭다운 왼쪽에 두고, 화면이 좁아지면 라벨과 드롭다운을 함께 아래로 이동 */
+.form-row.time-row{align-items:center}
+.form-row.time-row .time-group{display:flex; gap:8px; flex-wrap:wrap; flex:1}
+@media (max-width: 520px){
+  .form-row.time-row{align-items:flex-start}
+  .form-row.time-row label{width:100%; min-width:0; margin-bottom:6px}
+  .form-row.time-row .time-group{width:100%}
+}
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
@@ -38,7 +47,7 @@
 <div class="row"><div class="form-row"><label for="phone">연락처</label><input aria-label="연락용 번호(숫자만)" id="phone" inputmode="numeric" pattern="\d{8,13}" placeholder="연락처 (숫자만) *" required="" title="숫자만 8~13자리"/></div></div>
 <div class="row">
 <div class="form-row"><label for="date">예약일자</label><input aria-label="예약일자 (미입력 시 즉시주문)" id="date" inputmode="none" min="2025-10-31" onfocus="this.showPicker &amp;&amp; this.showPicker()" type="date"/></div>
-<div class="form-row"><label for="time">예약시간</label><div style="display:flex; gap:8px; flex-wrap:wrap; width:100%"><select aria-label="오전/오후" id="timePeriod" name="timePeriod" required><option disabled selected value="">오전/오후</option><option value="AM">오전</option><option value="PM">오후</option></select><select aria-label="시간(1~12)" id="timeHour" name="timeHour" required><option disabled selected value="">시</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><select aria-label="분(5분)" id="timeMinute" name="timeMinute" required><option disabled selected value="">분</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option><option value="60">60</option></select></div></div>
+<div class="form-row time-row"><label for="time">예약시간</label><div class="time-group" style="display:flex; gap:8px; flex-wrap:wrap; width:100%"><select aria-label="오전/오후" id="timePeriod" name="timePeriod" required=""><option disabled="" selected="" value="">오전/오후</option><option value="AM">오전</option><option value="PM">오후</option></select><select aria-label="시간(1~12)" id="timeHour" name="timeHour" required=""><option disabled="" selected="" value="">시</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><select aria-label="분(5분)" id="timeMinute" name="timeMinute" required=""><option disabled="" selected="" value="">분</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option><option value="60">60</option></select></div></div>
 </div>
 <div class="row"><textarea id="note" placeholder="요청사항" style="width:100%;min-height:80px"></textarea></div>
 </div>
