@@ -30,6 +30,9 @@
   .form-row.time-row label{width:100%; min-width:0; margin-bottom:6px}
   .form-row.time-row .time-group{width:100%}
 }
+
+.subTabBtn{background:#0b3050;color:#e6edf3;border:1px solid #234;padding:6px 10px;border-radius:8px;cursor:pointer}
+.subTabBtn.active{background:#1976d2}
 </style>
 </head><body><div class="wrap">
 <h1>배달/예약</h1>
@@ -450,11 +453,18 @@
       historyPane.style.display = (which === 'history') ? 'block' : 'none';
       
       if (which === 'history') {
-        renderHistoryInto('history');
+        renderHistoryInto('history','all');
       }
     }
     
     activate('order');
+  var subTabs=document.querySelectorAll('#historyFilterTabs .subTabBtn');
+  window.__historyFilter='all';
+  subTabs.forEach(function(b){ b.addEventListener('click', function(){
+    subTabs.forEach(function(x){x.classList.toggle('active', x===b);});
+    window.__historyFilter=b.dataset.filter;
+    renderHistoryInto('history', window.__historyFilter);
+  });});
     
     tabs.forEach(function(b) {
       b.addEventListener('click', function() {

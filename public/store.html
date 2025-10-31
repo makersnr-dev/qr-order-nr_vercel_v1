@@ -9,6 +9,9 @@
 .menu-card:hover{filter:brightness(1.06)}
 .menu-title{font-weight:600;line-height:1.2;word-break:keep-all;overflow-wrap:anywhere}
 .menu-price{margin-top:6px;opacity:.9;font-size:.9em}
+
+.subTabBtn{background:#0b3050;color:#e6edf3;border:1px solid #234;padding:6px 10px;border-radius:8px;cursor:pointer}
+.subTabBtn.active{background:#1976d2}
 </style>
 </head><body><div class="wrap">
 <h1>QR Order - 주문</h1>
@@ -219,13 +222,27 @@ function renderMenu(){
   document.getElementById('callStaffBtn').onclick = callStaff;
 </script>
 </div>
-<div id="historyPane" class="tabPane" style="display:none"><div class="card"><h3>이전 주문</h3><div id="history"></div><div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div></div></div>
+<div id="historyPane" class="tabPane" style="display:none">
+<div class="card" style="margin:0 0 8px 0;padding:8px">
+  <div id="historyFilterTabs" style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="subTabBtn active" data-filter="all">전체</button>
+    <button class="subTabBtn" data-filter="store">매장</button>
+    <button class="subTabBtn" data-filter="delivery">배달/예약</button>
+  </div>
+</div><div class="card"><h3>이전 주문</h3><div id="history"></div><div class="small">이 브라우저에서 진행된 최근 주문을 표시합니다.</div></div></div>
 <script>
-function renderHistoryInto(elId){
+function renderHistoryInto(elId, filter){
   var box=document.getElementById(elId);
   if(!box) return;
   try{
     var arr=JSON.parse(localStorage.getItem('qrOrderHistory')||'[]');
+    // classify type: delivery if addr/reserve present
+    if(filter && filter!=='all'){
+      arr = arr.filter(function(o){
+        var isDelivery = !!(o.addr || (o.reserve && String(o.reserve).trim()))
+        return filter==='delivery' ? isDelivery : !isDelivery;
+      });
+    }
     if(!arr.length){ box.innerHTML='<div class="small">표시할 내역이 없습니다.</div>'; return; }
     box.innerHTML = arr.slice(-50).reverse().map(function(o){
       var d=new Date(o.time||Date.now());
@@ -250,10 +267,17 @@ document.addEventListener('DOMContentLoaded', function(){
     if(orderPane) orderPane.style.display = (which==='order') ? 'block' : 'none';
     if(historyPane){
       historyPane.style.display = (which==='history') ? 'block' : 'none';
-      if(which==='history') renderHistoryInto('history');
+      if(which==='history') renderHistoryInto('history','all');
     }
   }
   activate('order');
+  var subTabs=document.querySelectorAll('#historyFilterTabs .subTabBtn');
+  window.__historyFilter='all';
+  subTabs.forEach(function(b){ b.addEventListener('click', function(){
+    subTabs.forEach(function(x){x.classList.toggle('active', x===b);});
+    window.__historyFilter=b.dataset.filter;
+    renderHistoryInto('history', window.__historyFilter);
+  });});
   tabs.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
 });
 </script>
