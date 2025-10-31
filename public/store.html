@@ -163,7 +163,9 @@ function renderMenu(){
 
   function addItem(id){ cart.set(id,(cart.get(id)||0)+1); saveCart(); renderMenu(); renderCart(); updateSum(); }
   function subItem(id){ const v=(cart.get(id)||0)-1; if(v<=0) cart.delete(id); else cart.set(id,v); saveCart(); renderMenu(); renderCart(); updateSum(); }
-  async function loadMenu(){ const r=await fetch('/menu'); menuData=await r.json(); renderMenu(); updateSum(); }
+  async function loadMenu(){ const r=await fetch('/menu'); menuData=await r.json(); 
+      try { window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
+renderMenu(); updateSum(); }
   async function loadClientKey(){ const r=await fetch('/config'); const j=await r.json(); clientKey=j.clientKey; }
   function getAmount(){ return Number(document.getElementById('sum').textContent.replace(/[^0-9]/g,''))||0; }
   
@@ -248,7 +250,7 @@ function renderHistoryInto(elId, filter){
       var d=new Date(o.time||Date.now());
       var m=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2);
       var hh=('0'+d.getHours()).slice(-2), mi=('0'+d.getMinutes()).slice(-2);
-      var items=(o.items||[]).map(function(p){ return p[0]+'×'+p[1]; }).join(', ');
+      var items=(o.items||[]).map(function(p){ var id=p[0]; var name=(window.menuNameById && window.menuNameById[id])||id; return name+'×'+p[1]; }).join(', ');
       var extra=[o.addr?(' · '+o.addr):'', o.reserve?(' · '+o.reserve):''].join('');
       var amt=o.amount||0;
       return '<div style="padding:6px 0;border-bottom:1px solid #223">'+m+'/'+dd+' '+hh+':'+mi+' · '+items+extra+(amt?(' · 합계 '+amt.toLocaleString('ko-KR')+'원'):'')+'</div>';

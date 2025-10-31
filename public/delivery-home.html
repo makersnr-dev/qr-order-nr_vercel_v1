@@ -232,7 +232,9 @@
       const r = await fetch('/menu');
       if (!r.ok) throw new Error('Menu fetch failed');
       menuData = await r.json();
-      renderMenu();
+      
+      try { window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
+renderMenu();
       updateSum();
     } catch (e) {
       console.error('메뉴 로드 실패:', e);
@@ -413,9 +415,7 @@
         const dd = ('0' + d.getDate()).slice(-2);
         const hh = ('0' + d.getHours()).slice(-2);
         const mi = ('0' + d.getMinutes()).slice(-2);
-        const items = (o.items || []).map(function(p) {
-          return p[0] + '×' + p[1];
-        }).join(', ');
+        const items = (o.items || []).map(function(p) { const id=p[0]; const name=(window.menuNameById && window.menuNameById[id])||id; return name + '×' + p[1]; }).join(', ');
         const extra = [
           o.addr ? (' · ' + o.addr) : '',
           o.reserve ? (' · ' + o.reserve) : ''
