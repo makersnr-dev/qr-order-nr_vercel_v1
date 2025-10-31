@@ -382,44 +382,24 @@
         return;
       }
       
-      // 배달 주문만 필터링
-      const deliveryOrders = arr.filter(o => o.orderType === 'delivery');
-      
-      if (!deliveryOrders.length) {
-        box.innerHTML = '<div class="small">배달 주문 내역이 없습니다.</div>';
-        return;
-      }
-      
-      box.innerHTML = deliveryOrders.slice(-50).reverse().map(function(o) {
+      box.innerHTML = arr.slice(-50).reverse().map(function(o) {
         const d = new Date(o.time || Date.now());
         const m = ('0' + (d.getMonth() + 1)).slice(-2);
         const dd = ('0' + d.getDate()).slice(-2);
         const hh = ('0' + d.getHours()).slice(-2);
         const mi = ('0' + d.getMinutes()).slice(-2);
-        
         const items = (o.items || []).map(function(p) {
           return p[0] + '×' + p[1];
         }).join(', ');
-        
+        const extra = [
+          o.addr ? (' · ' + o.addr) : '',
+          o.reserve ? (' · ' + o.reserve) : ''
+        ].join('');
         const amt = o.amount || 0;
         
-        // 배달 정보 표시
-        const deliveryInfo = [];
-        if (o.name) deliveryInfo.push('주문자: ' + o.name);
-        if (o.addr) deliveryInfo.push('주소: ' + o.addr);
-        if (o.phone) deliveryInfo.push('연락처: ' + o.phone);
-        if (o.reserve) deliveryInfo.push('예약: ' + o.reserve);
-        if (o.note) deliveryInfo.push('요청: ' + o.note);
-        
-        const deliveryInfoHtml = deliveryInfo.length 
-          ? '<div class="small" style="margin-top:4px;opacity:0.7">' + deliveryInfo.join(' · ') + '</div>'
-          : '';
-        
-        return '<div style="padding:8px 0;border-bottom:1px solid #223">' +
-          '<div><strong>' + m + '/' + dd + ' ' + hh + ':' + mi + '</strong></div>' +
-          '<div class="small" style="margin-top:2px">메뉴: ' + items + '</div>' +
-          deliveryInfoHtml +
-          '<div style="margin-top:4px"><strong>합계: ' + amt.toLocaleString('ko-KR') + '원</strong></div>' +
+        return '<div style="padding:6px 0;border-bottom:1px solid #223">' +
+          m + '/' + dd + ' ' + hh + ':' + mi + ' · ' + items + extra +
+          (amt ? (' · 합계 ' + amt.toLocaleString('ko-KR') + '원') : '') +
           '</div>';
       }).join('');
     } catch (e) {

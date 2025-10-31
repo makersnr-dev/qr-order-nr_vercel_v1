@@ -94,36 +94,23 @@
       localStorage.removeItem('qrCart'); 
     }catch(_){}
 
-    // 6. 주문 이력 저장 (개선)
+    // 6. 주문 이력 저장 (선택사항)
     try {
       const history = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
-      const historyItem = {
+      history.push({
         time: Date.now(),
         items: items,
         amount: amount,
-        orderId: orderId,
+        addr: deliveryInfo?.addr || '',
+        reserve: deliveryInfo?.reserveTime || '',
         orderType: orderType || 'store'
-      };
-      
-      // 배달 주문인 경우 배달 정보 포함
-      if (orderType === 'delivery' && deliveryInfo) {
-        historyItem.addr = deliveryInfo.addr || '';
-        historyItem.name = deliveryInfo.name || '';
-        historyItem.phone = deliveryInfo.phone || '';
-        historyItem.reserve = deliveryInfo.reserveTime || '';
-        historyItem.note = deliveryInfo.note || '';
-      }
-      
-      history.push(historyItem);
-      
+      });
       // 최근 100개만 유지
       if (history.length > 100) {
         history.splice(0, history.length - 100);
       }
       localStorage.setItem('qrOrderHistory', JSON.stringify(history));
-    } catch(e) {
-      console.warn('History save failed:', e);
-    }
+    } catch(_) {}
     
     // 7. 성공 모달 표시
     progress.textContent=''; 
