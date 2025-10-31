@@ -120,7 +120,37 @@ app.post('/bank-info', requireAuth, (req,res)=>{
   }
 });
 
-app.post('/orders', (req,res)=>{ bankInfo,  const { bankInfo,  tableNo, items, amount, paymentKey, orderId, deliveryInfo, orderType } = req.body||{ bankInfo, }; const o = { bankInfo: (req.body && req.body.bankInfo) || null,  bankInfo,  id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', deliveryInfo: (deliveryInfo||null), orderType: (orderType||null), status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
+
+app.post('/orders', (req,res)=>{
+  try{
+    const body = req.body || {};
+    const tableNo = body.tableNo || '';
+    const items = Array.isArray(body.items) ? body.items : [];
+    const amount = Number(body.amount) || 0;
+    const orderId = body.orderId || ('ORD-' + Date.now());
+    const deliveryInfo = body.deliveryInfo || null;
+    const orderType = body.orderType || (deliveryInfo ? 'delivery' : (tableNo ? 'store' : 'reserve'));
+    const bankInfo = body.bankInfo || null;
+
+    const o = {
+      id: orderId,
+      tableNo,
+      items,
+      amount,
+      deliveryInfo,
+      orderType,
+      bankInfo,
+      status: 'pending',
+      createdAt: Date.now()
+    };
+    ORDERS.push(o);
+    try{ broadcastOrder(o); }catch(_){}
+    return res.json({ ok:true, order:o });
+  }catch(e){
+    console.error('orders create error', e);
+    return res.status(500).json({ ok:false, error: 'orders_create_failed' });
+  }
+});
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
 
