@@ -3,17 +3,7 @@
 <html lang="ko"><head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>QR Order - 배달/예약</title>
-<script src="https://js.tosspayments.com/v1">
-function renderBankInfoText(){
-  const el = document.getElementById('bankInfoText');
-  if(!el) return;
-  const b = (__bankInfo && (__bankInfo.bank || '')) || '-';
-  const a = (__bankInfo && (__bankInfo.account || __bankInfo.accountNumber || '')) || '-';
-  const h = (__bankInfo && (__bankInfo.holder || __bankInfo.owner || '')) || '-';
-  el.textContent = "은행:'" + b + "', 계좌번호:'" + a + "', 예금주:'" + h + "'";
-}
-
-</script>
+<script src="https://js.tosspayments.com/v1"></script>
 <style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select,textarea{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #223;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer;padding:8px}
@@ -99,14 +89,6 @@ function renderBankInfoText(){
 <script>
 (function() {
   'use strict';
-  // ===== 안전한 기본 설정 =====
-  const ORDER_BASE = (window.ORDER_BASE || '');
-  function joinUrl(base, path){
-    if(!base) return path;
-    if(base.endsWith('/') && path.startsWith('/')) return base + path.slice(1);
-    if(!base.endsWith('/') && !path.startsWith('/')) return base + '/' + path;
-    return base + path;
-  }
   
   // ===== 전역 변수 =====
   const cart = loadCart();
@@ -123,48 +105,16 @@ function showReserveUI(show){
 }
 async function fetchBankInfo(){
   try{
-    if(__bankInfo) return __bankInfo;
-    const candidates = [
-      joinUrl(ORDER_BASE || '', '/bank-info/public'),
-      '/bank-info/public',
-      '/bank-info',
-      '/api/bank-info',
-      '/admin/bank-accounts/public'
-    ];
-    for(const url of candidates){
-      try{
-        const r = await fetch(url, { cache: 'no-store' });
-        if(r && r.ok){
-          const j = await r.json();
-          __bankInfo = (j && (j.data || j.bankInfo || j)) || null;
-          if(__bankInfo) return __bankInfo;
-        }
-      }catch(e){ /* try next */ }
-    }
+    const r = await fetch(joinUrl(ORDER_BASE || '', '/bank-info/public'));
+    if(!r.ok) return;
+    const j = await r.json();
+    __bankInfo = (j && j.data) || null;
   }catch(_){ /* ignore */ }
-  return null;
 }
-async function copyBankInfo(){
+function copyBankInfo(){
   try{
-    if(!__bankInfo){ await fetchBankInfo(); }
-    if(!__bankInfo){
-      const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='계좌 정보를 불러오지 못했습니다.'; setTimeout(()=>m.textContent='', 2500); }
-      return;
-    }
-    const text = [__bankInfo.bank||'', __bankInfo.account||__bankInfo.accountNumber||'', __bankInfo.holder||__bankInfo.owner||''].filter(Boolean).join(' / ');
-    const doMsg = (ok)=>{ const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent = ok ? '복사되었습니다.' : '복사 실패'; setTimeout(()=>m.textContent='', 2000); } };
-    try{
-      await navigator.clipboard.writeText(text);
-      doMsg(true);
-      return;
-    }catch(e){ /* fallback below */ }
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.top='-1000px';
-    document.body.appendChild(ta); ta.select();
-    try{ const ok = document.execCommand('copy'); doMsg(!!ok); } finally { document.body.removeChild(ta);}    
-  }catch(_){ /* ignore */ }
-}
-const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
+    if(!__bankInfo){ return; }
+    const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
     navigator.clipboard.writeText(text).then(()=>{
       const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }
     });
@@ -197,9 +147,19 @@ const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''
     return `${hh}:${mm}`;
   }
 
+
   // ===== 장바구니 관리 =====
   function loadCart() {
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const raw = localStorage.getItem('qrCart');
       if (!raw) return new Map();
@@ -213,6 +173,15 @@ const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''
   
   function saveCart() {
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const arr = Array.from(cart.entries()).filter(([_,q]) => Number(q) > 0);
       localStorage.setItem('qrCart', JSON.stringify(arr));
@@ -314,12 +283,30 @@ const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''
   // ===== API 호출 =====
   async function loadMenu() {
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const r = await fetch('/menu');
       if (!r.ok) throw new Error('Menu fetch failed');
       menuData = await r.json();
       
       try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
  window.menuNameById = (menuData || []).reduce((acc,m)=>{ acc[m.id]=m.name; return acc; }, {}); } catch(_) { window.menuNameById = window.menuNameById || {}; }
 renderMenu();
       updateSum();
@@ -331,6 +318,15 @@ renderMenu();
   
   async function loadClientKey() {
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const r = await fetch('/config');
       if (!r.ok) throw new Error('Config fetch failed');
@@ -458,6 +454,15 @@ renderMenu();
 
     // 주문 정보 저장
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       sessionStorage.setItem('qrOrderPending', JSON.stringify({
         items,
@@ -485,6 +490,15 @@ renderMenu();
   }
   // 결제 요청 // __reserveBranch
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const tossPayments = TossPayments(clientKey);
       await tossPayments.requestPayment('카드', {
@@ -517,6 +531,15 @@ renderMenu();
     if (!box) return;
     
     try {
+    // reserve toggles bound
+    const mDel = document.getElementById('orderModeDelivery');
+    const mRes = document.getElementById('orderModeReserve');
+    const bankBtn = document.getElementById('bankCopyBtn');
+    if(mDel && mRes){
+      mDel.addEventListener('change',()=>{ if(mDel.checked){ showReserveUI(false); }});
+      mRes.addEventListener('change',()=>{ if(mRes.checked){ showReserveUI(true); fetchBankInfo(); }});
+    }
+    if(bankBtn){ bankBtn.addEventListener('click', copyBankInfo); }
 
       const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
       
@@ -592,24 +615,6 @@ renderMenu();
   // ===== 초기화 =====
   function init() {
     console.log('Initializing delivery page...');
-    // 예약(무결제) 전환 시, 입금계좌 UI 제어 및 계좌정보 선로딩
-    const mDel = document.getElementById('orderModeDelivery');
-    const mRes = document.getElementById('orderModeReserve');
-    const bankBtn = document.getElementById('bankCopyBtn');
-    \1
-      (async ()=>{
-        if(reserve){
-          try{ if(!window.__bankInfo){ await fetchBankInfo(); } }catch(e){}
-          renderBankInfoText();
-        }
-      })();
-    }
-    if(mDel){ mDel.addEventListener('change', onModeChange); }
-    if(mRes){ mRes.addEventListener('change', onModeChange); }
-    if(bankBtn){ bankBtn.addEventListener('click', function(){ copyBankInfo(); }); }
-    // 초기 상태 반영
-    onModeChange();
-    renderBankInfoText();
     
     // 결제 버튼 연결
     const payBtn = getElement('payBtn');
@@ -641,15 +646,79 @@ renderMenu();
     init();
   }
 })();
-
-function renderBankInfoText(){
-  const el = document.getElementById('bankInfoText');
-  if(!el) return;
-  const b = (__bankInfo && (__bankInfo.bank || '')) || '-';
-  const a = (__bankInfo && (__bankInfo.account || __bankInfo.accountNumber || '')) || '-';
-  const h = (__bankInfo && (__bankInfo.holder || __bankInfo.owner || '')) || '-';
-  el.textContent = "은행:'" + b + "', 계좌번호:'" + a + "', 예금주:'" + h + "'";
-}
-
 </script>
-</div></body></html>
+</div>
+<script>
+(function(){
+  // isolated v2 logic to avoid conflicts
+  var __bankInfoV2 = null;
+  function joinUrl(base, path){
+    if(!base) return path;
+    if(base.slice(-1) === '/' && path.charAt(0) === '/') return base + path.slice(1);
+    if(base.slice(-1) !== '/' && path.charAt(0) !== '/') return base + '/' + path;
+    return base + path;
+  }
+  function getOrderBase(){
+    try { return (window.ORDER_BASE || ''); } catch(e){ return ''; }
+  }
+  async function fetchBankInfoV2(){
+    if(__bankInfoV2) return __bankInfoV2;
+    var base = getOrderBase();
+    var urls = [
+      joinUrl(base, '/bank-info/public'),
+      '/bank-info/public','/bank-info','/api/bank-info','/admin/bank-accounts/public'
+    ];
+    for(var i=0;i<urls.length;i++){
+      try{
+        var r = await fetch(urls[i], { cache: 'no-store' });
+        if(r && r.ok){
+          var j = await r.json();
+          var d = (j && (j.data || j.bankInfo || j)) || null;
+          if(d){ __bankInfoV2 = d; return d; }
+        }
+      }catch(e){
+        // try next
+      }
+    }
+    return null;
+  }
+  function renderBankInfoTextV2(){
+    var el = document.getElementById('bankInfoText');
+    if(!el) return;
+    var b = (__bankInfoV2 && (__bankInfoV2.bank || '')) || '-';
+    var a = (__bankInfoV2 && (__bankInfoV2.account || __bankInfoV2.accountNumber || '')) || '-';
+    var h = (__bankInfoV2 && (__bankInfoV2.holder || __bankInfoV2.owner || '')) || '-';
+    el.textContent = "은행:'" + b + "', 계좌번호:'" + a + "', 예금주:'" + h + "'";
+  }
+  function showReserveUIV2(show){
+    var row = document.getElementById('reserveBankRow');
+    if(row){
+      if(show){ row.classList.remove('hidden'); }
+      else { row.classList.add('hidden'); }
+    }
+  }
+  async function onModeChangeV2(){
+    var mRes = document.getElementById('orderModeReserve');
+    var reserve = !!(mRes && mRes.checked);
+    showReserveUIV2(reserve);
+    if(reserve){
+      try{ await fetchBankInfoV2(); }catch(e){}
+      renderBankInfoTextV2();
+    }
+  }
+  function setupV2(){
+    var mDel = document.getElementById('orderModeDelivery');
+    var mRes = document.getElementById('orderModeReserve');
+    if(mDel){ mDel.addEventListener('change', onModeChangeV2); }
+    if(mRes){ mRes.addEventListener('change', onModeChangeV2); }
+    onModeChangeV2();
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', setupV2);
+  }else{
+    setupV2();
+  }
+})();
+</script>
+
+</body></html>
