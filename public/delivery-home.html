@@ -98,8 +98,11 @@
   // ===== 유틸리티 함수 =====
 let __bankInfo = null;
 function showReserveUI(show){
-  const row = document.getElementById('reserveBankRow');
-  if(row){ row.classList.toggle('hidden', !show); }
+  var btn = document.getElementById('bankCopyBtn');
+  var msg = document.getElementById('bankCopyMsg');
+  if(btn){ btn.classList.toggle('hidden', !show); }
+  if(msg){ msg.classList.toggle('hidden', !show); }
+}
   const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
 }
 async function fetchBankInfo(){
