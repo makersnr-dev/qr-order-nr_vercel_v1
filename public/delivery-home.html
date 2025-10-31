@@ -92,49 +92,60 @@
   const fmt = (n) => (n||0).toLocaleString('ko-KR');
 
   // ===== 유틸리티 함수 =====
+const fmt = (n) => (n||0).toLocaleString('ko-KR');
 let __bankInfo = null;
-if(msg){ msg.classList.toggle('hidden', !show); }
+
+function showReserveUI(show){
+  const btn = document.getElementById('bankCopyBtn');
+  const msg = document.getElementById('bankCopyMsg');
+  if(btn) btn.classList.toggle('hidden', !show);
+  if(msg) msg.classList.toggle('hidden', !show);
 }
-  const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
+
+async function fetchBankInfo(){
+  try{
+    const r = await fetch(joinUrl(ORDER_BASE||'', '/bank-info/public'));
+    if(!r.ok) return;
+    const j = await r.json();
+    __bankInfo = (j && j.data) || null;
+  }catch(e){}
 }
-async catch(_){ /* ignore */ }
+
+function copyBankInfo(){
+  if(!__bankInfo) return;
+  const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||'']
+    .filter(Boolean).join(' / ');
+  navigator.clipboard.writeText(text);
+  const m = document.getElementById('bankCopyMsg');
+  if(m){ m.textContent='복사됨'; setTimeout(()=>m.textContent='',1500); }
 }
+
+function updatePayButton(){
+  const payBtn = document.getElementById('payBtn');
+  const isReserve = document.getElementById('orderModeReserve')?.checked;
+  if(payBtn) payBtn.textContent = isReserve ? '예약하기' : '결제하기';
 }
-const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
-    navigator.clipboard.writeText(text).then(()=>{
-      const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const mDel = document.getElementById('orderModeDelivery');
+  const mRes = document.getElementById('orderModeReserve');
+  const bankBtn = document.getElementById('bankCopyBtn');
+
+  if(mDel && mRes){
+    mDel.addEventListener('change', ()=>{
+      showReserveUI(false);
+      updatePayButton();
     });
-  }catch(_){ /* ignore */ }
-}
-
-  function getElement(id) {
-    const el = document.getElementById(id);
-    if (!el) {
-      console.warn(`Element not found: ${id}`);
-    }
-    return el;
+    mRes.addEventListener('change', ()=>{
+      showReserveUI(true);
+      fetchBankInfo();
+      updatePayButton();
+    });
   }
-
-  function getElementValue(id, defaultValue = '') {
-    const el = getElement(id);
-    return el ? (el.value || defaultValue).trim() : defaultValue;
-  }
-  function buildTimeFromSelects() {
-    const period = getElementValue('timePeriod');
-    const hourStr = getElementValue('timeHour');
-    const minStr = getElementValue('timeMinute');
-    if (!period || !hourStr || !minStr) return '';
-    let h = parseInt(hourStr, 10);
-    if (isNaN(h)) return '';
-    if (period === 'AM') { if (h === 12) h = 0; }
-    else if (period === 'PM') { if (h !== 12) h = h + 12; }
-    const hh = ('0' + h).slice(-2);
-    const mm = ('0' + parseInt(minStr,10)).slice(-2);
-    return `${hh}:${mm}`;
-  }
-
-
-  // ===== 장바구니 관리 =====
+  if(bankBtn) bankBtn.addEventListener('click', copyBankInfo);
+  updatePayButton();
+});
+// ===== 장바구니 관리 =====
   function loadCart() {
     try {
     // reserve toggles bound
