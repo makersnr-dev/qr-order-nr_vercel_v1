@@ -104,12 +104,18 @@ function showReserveUI(show){
   const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
 }
 async function fetchBankInfo(){
+
   try{
     const r = await fetch(joinUrl(ORDER_BASE || '', '/bank-info/public'));
     if(!r.ok) return;
     const j = await r.json();
     __bankInfo = (j && j.data) || null;
   }catch(_){ /* ignore */ }
+}
+function updatePayButton(){
+  const payBtn = document.getElementById('payBtn');
+  const isReserve = !!(document.getElementById('orderModeReserve') && document.getElementById('orderModeReserve').checked);
+  if(payBtn){ payBtn.textContent = isReserve ? '예약하기' : '결제하기'; }
 }
 function copyBankInfo(){
   try{
@@ -641,7 +647,7 @@ renderMenu();
 
   // DOM 로드 완료 후 초기화
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', ()=>{ init(); try{ updatePayButton(); }catch(_){ } });
   } else {
     init();
   }
