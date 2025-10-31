@@ -409,7 +409,7 @@
       const arr = JSON.parse(localStorage.getItem('qrOrderHistory') || '[]');
       const arrFiltered = (historyFilter==='all') ? arr : arr.filter(o => historyFilter==='delivery' ? isDeliveryOrder(o) : !isDeliveryOrder(o));
       
-      if (!arr.length) {
+      if (!arrFiltered.length) {
         box.innerHTML = '<div class="small">표시할 내역이 없습니다.</div>';
         return;
       }
