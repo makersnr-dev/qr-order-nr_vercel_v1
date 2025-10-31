@@ -3,7 +3,17 @@
 <html lang="ko"><head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>QR Order - 배달/예약</title>
-<script src="https://js.tosspayments.com/v1"></script>
+<script src="https://js.tosspayments.com/v1">
+function renderBankInfoText(){
+  const el = document.getElementById('bankInfoText');
+  if(!el) return;
+  const b = (__bankInfo && (__bankInfo.bank || '')) || '-';
+  const a = (__bankInfo && (__bankInfo.account || __bankInfo.accountNumber || '')) || '-';
+  const h = (__bankInfo && (__bankInfo.holder || __bankInfo.owner || '')) || '-';
+  el.textContent = "은행:'" + b + "', 계좌번호:'" + a + "', 예금주:'" + h + "'";
+}
+
+</script>
 <style>body{font-family:system-ui,Segoe UI,Noto Sans KR,sans-serif;background:#0b0f14;color:#e6edf3;margin:0} .wrap{max-width:700px;margin:20px auto;padding:16px} .card{background:#0d131b;border:1px solid #223;border-radius:12px;padding:12px;margin-bottom:12px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .btn{padding:10px 14px;border:1px solid #294760;border-radius:10px;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer} input,select,textarea{padding:10px;border-radius:10px;border:1px solid #223;background:#0e1520;color:#e6edf3}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .menu-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #223;background:linear-gradient(180deg,#0d2233,#0a1824);color:#e6edf3;cursor:pointer;padding:8px}
@@ -186,7 +196,6 @@ const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''
     const mm = ('0' + parseInt(minStr,10)).slice(-2);
     return `${hh}:${mm}`;
   }
-
 
   // ===== 장바구니 관리 =====
   function loadCart() {
@@ -587,16 +596,20 @@ renderMenu();
     const mDel = document.getElementById('orderModeDelivery');
     const mRes = document.getElementById('orderModeReserve');
     const bankBtn = document.getElementById('bankCopyBtn');
-    function onModeChange(){
-      const reserve = !!(mRes && mRes.checked);
-      showReserveUI(reserve);
-      if(reserve){ fetchBankInfo(); }
+    \1
+      (async ()=>{
+        if(reserve){
+          try{ if(!window.__bankInfo){ await fetchBankInfo(); } }catch(e){}
+          renderBankInfoText();
+        }
+      })();
     }
     if(mDel){ mDel.addEventListener('change', onModeChange); }
     if(mRes){ mRes.addEventListener('change', onModeChange); }
     if(bankBtn){ bankBtn.addEventListener('click', function(){ copyBankInfo(); }); }
     // 초기 상태 반영
     onModeChange();
+    renderBankInfoText();
     
     // 결제 버튼 연결
     const payBtn = getElement('payBtn');
@@ -628,5 +641,15 @@ renderMenu();
     init();
   }
 })();
+
+function renderBankInfoText(){
+  const el = document.getElementById('bankInfoText');
+  if(!el) return;
+  const b = (__bankInfo && (__bankInfo.bank || '')) || '-';
+  const a = (__bankInfo && (__bankInfo.account || __bankInfo.accountNumber || '')) || '-';
+  const h = (__bankInfo && (__bankInfo.holder || __bankInfo.owner || '')) || '-';
+  el.textContent = "은행:'" + b + "', 계좌번호:'" + a + "', 예금주:'" + h + "'";
+}
+
 </script>
 </div></body></html>
