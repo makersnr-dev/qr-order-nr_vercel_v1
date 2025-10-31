@@ -120,7 +120,7 @@ app.post('/bank-info', requireAuth, (req,res)=>{
   }
 });
 
-app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId, deliveryInfo, orderType } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', deliveryInfo: (deliveryInfo||null), orderType: (orderType||null), status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
+app.post('/orders', (req,res)=>{ bankInfo,  const { bankInfo,  tableNo, items, amount, paymentKey, orderId, deliveryInfo, orderType } = req.body||{ bankInfo, }; const o = { bankInfo: (req.body && req.body.bankInfo) || null,  bankInfo,  id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', deliveryInfo: (deliveryInfo||null), orderType: (orderType||null), status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
 
