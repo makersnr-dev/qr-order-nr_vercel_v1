@@ -100,7 +100,7 @@ app.get('/events/orders', (req,res)=>{ res.setHeader('Content-Type','text/event-
   req.on('close',()=>{ try{ SSE_CLIENTS.delete(res); res.end(); }catch(_){}}); res.setHeader('Cache-Control','no-cache'); res.setHeader('Connection','keep-alive'); res.flushHeaders?.(); const client={res}; clients.add(client); req.on('close', ()=> clients.delete(client)); });
 function broadcastOrder(o){ const data=JSON.stringify({ type:'order', id:o.id, tableNo:o.tableNo, amount:o.amount, createdAt:o.createdAt }); for(const c of clients){ try{ c.res.write(`event: order\n`); c.res.write(`data: ${data}\n\n`); }catch(_){} } }
 app.get('/orders', (_req,res)=> res.json(ORDERS));
-app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
+app.post('/orders', (req,res)=>{ const { tableNo, items, amount, paymentKey, orderId, deliveryInfo, orderType } = req.body||{}; const o={ id:crypto.randomUUID(), orderId: orderId||`ORD-${Date.now()}`, tableNo, items:items||[], amount:Number(amount)||0, paymentKey:paymentKey||'', deliveryInfo: (deliveryInfo||null), orderType: (orderType||null), status:'접수', createdAt:new Date().toISOString() }; ORDERS.push(o); try{ broadcastOrder(o);}catch(_){} res.json({ ok:true, order:o }); });
 app.patch('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS[i]={ ...ORDERS[i], ...req.body }; res.json({ ok:true }); });
 app.delete('/orders/:id', requireAuth, (req,res)=>{ const i=ORDERS.findIndex(o=>o.id===req.params.id); if(i<0) return res.status(404).send('not found'); ORDERS.splice(i,1); res.json({ ok:true }); });
 
@@ -129,42 +129,3 @@ export default app;
 app.get('/store', (_req,res)=> res.sendFile(path.join(__dirname,'public','store.html')));
 app.get('/delivery', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-login.html')));
 app.get('/delivery/home', (_req,res)=> res.sendFile(path.join(__dirname,'public','delivery-home.html')));
-const DELIVERY_ORDERS = [];
-
-
-// ===== Delivery Orders (Collection/Basic Admin) =====
-app.post('/delivery-orders', async (req,res)=>{
-  try{
-    const { customer={}, items=[], amount=0, payment={} } = req.body||{};
-    const { name, phone, address, addressDetail, requestMemo, scheduledAt } = customer;
-    if(!name||!phone||!address){ return res.status(400).json({ ok:false, error:'name/phone/address required' }); }
-    if(!Array.isArray(items)){ return res.status(400).json({ ok:false, error:'items must be array' }); }
-    const id = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-    const order = {
-      id, type:'delivery', status:'신규',
-      items, amount: Number(amount)||0,
-      customer:{ name, phone, address, addressDetail: addressDetail||'', requestMemo: requestMemo||'', scheduledAt: scheduledAt||null },
-      payment, createdAt: new Date().toISOString()
-    };
-    DELIVERY_ORDERS.unshift(order);
-    res.json({ ok:true, order });
-  }catch(e){ console.error(e); res.status(500).json({ ok:false, error:'server-error' }); }
-});
-
-app.get('/delivery-orders', requireAuth, (_req,res)=>{
-  res.json(DELIVERY_ORDERS);
-});
-
-app.patch('/delivery-orders/:id', requireAuth, (req,res)=>{
-  const idx = DELIVERY_ORDERS.findIndex(o=> o.id===req.params.id);
-  if(idx<0) return res.status(404).json({ ok:false, error:'not found' });
-  DELIVERY_ORDERS[idx] = { ...DELIVERY_ORDERS[idx], ...req.body };
-  res.json({ ok:true });
-});
-
-app.delete('/delivery-orders/:id', requireAuth, (req,res)=>{
-  const idx = DELIVERY_ORDERS.findIndex(o=> o.id===req.params.id);
-  if(idx<0) return res.status(404).json({ ok:false, error:'not found' });
-  DELIVERY_ORDERS.splice(idx,1);
-  res.json({ ok:true });
-});
