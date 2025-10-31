@@ -411,7 +411,9 @@
         const hh = ('0' + d.getHours()).slice(-2);
         const mi = ('0' + d.getMinutes()).slice(-2);
         const items = (o.items || []).map(function(p) {
-          return p[0] + '×' + p[1];
+          var id = String(p[0]); var q = p[1];
+          var name = (MENU_MAP && MENU_MAP[id]) ? MENU_MAP[id] : id;
+          return name + '×' + q;
         }).join(', ');
         const extra = [
           o.addr ? (' · ' + o.addr) : '',
