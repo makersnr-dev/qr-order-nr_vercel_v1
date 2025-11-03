@@ -103,17 +103,49 @@ function showReserveUI(show){
   if(row){ row.classList.toggle('hidden', !show); }
   const btn = document.getElementById('bankCopyBtn'); if(btn){ btn.disabled = !show; }
 }
-async function fetchBankInfo(){
-  try{
-    const r = await fetch(joinUrl(ORDER_BASE || '', '/bank-info/public'));
-    if(!r.ok) return;
+async function fetchBankInfo() {
+  const btn = document.getElementById('bankCopyBtn');
+  const msg = document.getElementById('bankCopyMsg');
+  try {
+    const r = await fetch('/bank-info/public');
+    if (!r.ok) throw new Error('응답 오류');
     const j = await r.json();
-    __bankInfo = (j && j.data) || null;
-  }catch(_){ /* ignore */ }
+    if (j.ok && j.data && j.data.bank) {
+      __bankInfo = j.data;
+      if (btn) btn.disabled = false;
+      if (msg) msg.textContent = `${j.data.bank} ${j.data.account}`;
+    } else {
+      __bankInfo = null;
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = '계좌 정보가 없습니다.';
+    }
+  } catch (e) {
+    console.error('fetchBankInfo error:', e);
+    __bankInfo = null;
+    if (btn) btn.disabled = true;
+    if (msg) msg.textContent = '계좌 정보를 불러올 수 없습니다.';
+  }
 }
-function copyBankInfo(){
-  try{
-    if(!__bankInfo){ return; }
+
+function copyBankInfo() {
+  if (!__bankInfo) {
+    alert('복사할 계좌 정보가 없습니다.');
+    return;
+  }
+  const text = `${__bankInfo.bank} ${__bankInfo.account} (${__bankInfo.holder})`;
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      const m = document.getElementById('bankCopyMsg');
+      if (m) {
+        m.textContent = '복사되었습니다.';
+        setTimeout(() => (m.textContent = ''), 2000);
+      }
+    })
+    .catch(err => {
+      console.error('Clipboard error:', err);
+      alert('복사 실패. 수동으로 복사해주세요.');
+    });
+}
     const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
     navigator.clipboard.writeText(text).then(()=>{
       const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }

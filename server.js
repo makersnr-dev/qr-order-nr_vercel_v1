@@ -169,7 +169,22 @@ app.get('/healthz', (_req,res)=> res.send('ok'));
 app.get('/payment/success', (_req,res)=> res.sendFile(path.join(__dirname,'public','success.html')));
 app.get('/payment/fail', (_req,res)=> res.sendFile(path.join(__dirname,'public','fail.html')));
 app.get('/', (_req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-if (process.env.VERCEL !== '1') app.listen(PORT, ()=> console.log('API on :'+PORT));
+if (process.env.VERCEL !== '1') 
+// === Added: Public bank info endpoint (no auth) ===
+app.get('/bank-info/public', (_req, res) => {
+  try {
+    if (!BANK_INFO.bank && !BANK_INFO.account) {
+      return res.json({ ok: false, message: 'No bank info set' });
+    }
+    res.json({ ok: true, data: BANK_INFO });
+  } catch (e) {
+    console.error('public bank-info error', e);
+    res.status(500).json({ ok: false });
+  }
+});
+
+
+app.listen(PORT, ()=> console.log('API on :'+PORT));
 
 app.post('/confirm', async (req,res)=>{ res.json({ ok:true }); });
 
