@@ -146,13 +146,7 @@ function copyBankInfo() {
       alert('복사 실패. 수동으로 복사해주세요.');
     });
 }
-    const text = [__bankInfo.bank||'', __bankInfo.account||'', __bankInfo.holder||''].filter(Boolean).join(' / ');
-    navigator.clipboard.writeText(text).then(()=>{
-      const m=document.getElementById('bankCopyMsg'); if(m){ m.textContent='복사되었습니다.'; setTimeout(()=>m.textContent='', 2000); }
-    });
-  }catch(_){ /* ignore */ }
-}
-
+   
   function getElement(id) {
     const el = document.getElementById(id);
     if (!el) {
